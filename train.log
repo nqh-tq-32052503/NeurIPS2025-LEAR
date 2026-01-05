@@ -1,0 +1,23 @@
+[INFO] 05-Jan-26 03:22:51 - Running Mammoth! on cd3effb45c51. (if you see this message more than once, you are probably importing something wrong)
+[WARNING] 05-Jan-26 03:22:51 - Warning: python-dotenv not installed. Ignoring .env file.
+[WARNING] 05-Jan-26 03:22:54 - Trying to load default configuration for model LEAR but no configuration file found in None.
+[WARNING] 05-Jan-26 03:22:54 - Default configuration file not found for dataset seq-cifar100. Using the defaults specified in the dataset class (if available).
+[INFO] 05-Jan-26 03:22:54 - `lr_scheduler` set to multisteplr, overrides default from dataset.
+[ERROR] 05-Jan-26 03:22:54 - Could not retrieve git hash.
+[INFO] 05-Jan-26 03:22:54 - Using device cuda:0
+Loading dataset: seq-cifar100
+[INFO] 05-Jan-26 03:22:54 - `wandb_entity` and `wandb_project` not set. Disabling wandb.
+[WARNING] 05-Jan-26 03:22:54 - Label noise is not available with multi-label datasets. If this is not multi-label, ignore this warning.
+[INFO] 05-Jan-26 03:22:56 - Loading pretrained weights from Hugging Face hub (timm/vit_base_patch16_224.augreg2_in21k_ft_in1k)
+[INFO] 05-Jan-26 03:22:57 - HTTP Request: HEAD https://huggingface.co/timm/vit_base_patch16_224.augreg2_in21k_ft_in1k/resolve/main/model.safetensors "HTTP/1.1 302 Found"
+[INFO] 05-Jan-26 03:22:57 - [timm/vit_base_patch16_224.augreg2_in21k_ft_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+[INFO] 05-Jan-26 03:22:58 - Loading pretrained weights from Hugging Face hub (timm/vit_base_patch16_224.augreg2_in21k_ft_in1k)
+[INFO] 05-Jan-26 03:22:58 - HTTP Request: HEAD https://huggingface.co/timm/vit_base_patch16_224.augreg2_in21k_ft_in1k/resolve/main/model.safetensors "HTTP/1.1 302 Found"
+[INFO] 05-Jan-26 03:22:58 - [timm/vit_base_patch16_224.augreg2_in21k_ft_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+[INFO] 05-Jan-26 03:22:58 - Using backbone: lear
+Using LEAR as backbone
+Namespace(dataset='seq-cifar100', model='LEAR', backbone='lear', load_best_args=False, dataset_config=None, model_config='default', num_classes=100, seed=None, permute_classes=False, base_path='./data/', results_path='results/', device=device(type='cuda', index=0), notes=None, eval_epochs=None, non_verbose=False, disable_log=False, num_workers=0, enable_other_metrics=False, debug_mode=False, inference_only=False, code_optimization=0, distributed='no', savecheck=None, save_checkpoint_mode='safe', loadcheck=None, ckpt_name=None, start_from=None, stop_after=None, wandb_name=None, wandb_entity=None, wandb_project=None, lr=0.03, batch_size=64, label_perc=1.0, label_perc_by_class=1.0, joint=0, eval_future=False, validation=None, validation_mode='current', fitting_mode='epochs', early_stopping_patience=5, early_stopping_metric='loss', early_stopping_freq=1, early_stopping_epsilon=1e-06, n_epochs=2, n_iters=None, optimizer='sgd', optim_wd=0.0, optim_mom=0.0, optim_nesterov=False, drop_last=False, lr_scheduler='multisteplr', scheduler_mode='epoch', lr_milestones=[35, 45], sched_multistep_lr_gamma=0.1, noise_type='symmetric', noise_rate=0.0, disable_noisy_labels_cache=False, cache_path_noisy_labels='noisy_labels', conf_jobnum='8b018c7f-35d1-4fb1-9769-4b330d72d272', conf_timestamp='2026-01-05 03:22:54.686261', conf_host='cd3effb45c51', conf_git_hash=None, minibatch_size=64, nowand=1)
+begin task 1, dataset:seq-cifar100
+[INFO] 05-Jan-26 03:23:00 - Using 0 workers for the dataloader.
+[INFO] 05-Jan-26 03:23:00 - Using 0 workers for the dataloader.
+choose experts for evaluate: [1]

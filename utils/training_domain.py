@@ -291,7 +291,7 @@ def train(model: ContinualModel, datasets,
 
         print(file=sys.stderr)
         start_task = 0 if args.start_from is None else args.start_from
-        end_task = len(datasets) #dataset.N_TASKS if args.stop_after is None else args.stop_after
+        end_task = 5 if args.stop_after is None else args.stop_after
 
         test_loaders = []
 
