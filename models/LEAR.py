@@ -173,6 +173,7 @@ class LEAR(ContinualModel):
 
         self.opt.zero_grad()
         if len(self.net.fcArr) > 1:
+            # NOTE: Task tiếp theo
             outputs, Freezed_global_features, Freezed_local_features, global_features, local_features = self.net(inputs, return_features=True)
             loss_kd = kl_loss(local_features, Freezed_local_features)
             loss_mi = l2_distance(global_features, Freezed_global_features) #Directly calculate the L2 distance between features is more efficient than calculate MI between prediction, and it's also effective
@@ -181,6 +182,7 @@ class LEAR(ContinualModel):
             loss_tot = loss_ce + loss_kd + loss_hsic + loss_mi
             loss_vis = [loss_ce.item(), loss_kd.item(), loss_hsic.item(), loss_mi.item()]
         else:
+            # NOTE: Task đầu tiên
             outputs, global_features, local_features = self.net(inputs)
             loss_hsic = -hsic(global_features, local_features)
             loss_ce = self.loss(outputs, labels)

@@ -291,13 +291,13 @@ def train(model: ContinualModel, datasets,
 
         print(file=sys.stderr)
         start_task = 0 if args.start_from is None else args.start_from
-        end_task = 5 if args.stop_after is None else args.stop_after
+        end_task = len(datasets) if args.stop_after is None else args.stop_after
 
         test_loaders = []
 
         torch.cuda.empty_cache()
         for t in range(start_task, end_task):
-
+            # NOTE: Một task là một dataset, tức là một domain
             print('begin task ' + str(t + 1) + ', dataset:' + datasets[t].NAME)
 
             model.net.train()
