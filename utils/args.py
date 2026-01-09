@@ -220,7 +220,7 @@ def add_configuration_args(parser: ArgumentParser, args: Namespace) -> None:
                               'If not provided, the `default` configuration is used.')
     config_group.add_argument('--list_datasets', type=str, help='List all the available configurations for the given dataset and exit.')
     config_group.add_argument('--transform_type', type=str, default="weak", help='Specify the transform type to use for the dataset (overrides the default defined in the dataset configuration).')
-
+    config_group.add_argument('--ncls_per_task', type=int, help="Number of classes for each task during training. If the dataset at current task has more than N classes, randomly choose N classes from them")
 
 def add_initial_args(parser) -> ArgumentParser:
     """
