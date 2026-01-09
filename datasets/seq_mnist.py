@@ -12,7 +12,7 @@ from PIL import Image
 from torchvision.datasets import MNIST
 
 from datasets.utils.continual_dataset import (ContinualDataset, fix_class_names_order,
-                                              store_masked_loaders)
+                                              store_masked_loaders, getAllLoaders)
 from utils.conf import base_path
 from datasets.utils import set_default_from_args
 
@@ -87,6 +87,17 @@ class SequentialMNIST(ContinualDataset):
         train, test = store_masked_loaders(train_dataset, test_dataset, self)
         return train, test
 
+    def get_all_data_loaders(self):
+        """Class method that returns the train and test loaders."""
+        transform = transforms.ToTensor()
+        train_dataset = MyMNIST(base_path() + 'MNIST',
+                                train=True, download=True, transform=transform)
+        test_dataset = MNIST(base_path() + 'MNIST',
+                             train=False, download=True, transform=transform)
+
+        train, test = getAllLoaders(train_dataset, test_dataset, self)
+        return train, test
+    
     @set_default_from_args("backbone")
     def get_backbone():
         return "mnistmlp"
