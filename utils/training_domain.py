@@ -321,7 +321,7 @@ def train(model: ContinualModel, datasets,
                     n_iterations = model.args.n_epochs * len(train_loader) if model.args.fitting_mode == 'epochs' else model.args.n_iters
                 mininterval = 0.2 if n_iterations is not None and n_iterations > 1000 else 0.1
                 train_pbar = tqdm(train_loader, total=n_iterations,  # train_loader is actually ignored, will update the progress bar manually
-                                  disable=args.non_verbose, mininterval=mininterval)
+                                  disable=args.non_verbose, mininterval=mininterval, ncols=200)
                 if args.non_verbose:
                     logging.info(f"Task {t + 1}")  # at least print the task number
 
