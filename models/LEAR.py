@@ -199,6 +199,8 @@ class LEAR(ContinualModel):
 
     def cal_expert_dist(self,x):
         processX = self.net.vitProcess(x)
+        if processX.size(1) == 1:
+            processX = processX.expand(-1, 3, -1, -1)
 
         features = self.net.local_vitmodel.patch_embed(processX)
         cls_token = self.net.local_vitmodel.cls_token.expand(features.shape[0], -1, -1)
