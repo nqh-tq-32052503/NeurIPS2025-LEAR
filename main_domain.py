@@ -376,7 +376,8 @@ def main(args=None):
 
     # check_args(args, dataset=dataset)
     check_args(args, dataset=datasets[0])
-
+    args.transform_type = "weak"
+    
     backbone = get_backbone(args)
     logging.info(f"Using backbone: {args.backbone}")
 
