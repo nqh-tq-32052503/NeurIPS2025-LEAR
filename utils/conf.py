@@ -211,8 +211,10 @@ def create_seeded_dataloader(args, dataset, non_verbose=False, **dataloader_args
         the dataloader object
     """
     num_classes_per_task = args.ncls_per_task
-    TARGET_CLASSES = random.sample(range(len(dataset.targets)), k=num_classes_per_task)
+    total_classes = len(set(dataset.targets.numpy().tolist()))
+    TARGET_CLASSES = random.sample(range(total_classes), k=num_classes_per_task)
     print("ncls_per_task", num_classes_per_task)
+    print("Total classes: ", total_classes)
     print("target classes: ", TARGET_CLASSES)
     print("Dataset targets: ", dataset.targets, len(dataset.targets))
     n_cpus = 4 if not hasattr(os, 'sched_getaffinity') else len(os.sched_getaffinity(0))
