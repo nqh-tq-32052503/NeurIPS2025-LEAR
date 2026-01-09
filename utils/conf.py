@@ -197,7 +197,7 @@ def create_all_seeded_dataloader(args, dataset, non_verbose=False, **dataloader_
 
     return DataLoader(dataset, **dataloader_args)
 
-def create_seeded_dataloader(args, dataset, non_verbose=False, **dataloader_args) -> DataLoader:
+def create_seeded_dataloader(args, dataset, target_classes=[], non_verbose=False, **dataloader_args) -> DataLoader:
     """
     Creates a dataloader object from a dataset, setting the seeds for the workers (if `--seed` is set).
 
@@ -210,13 +210,7 @@ def create_seeded_dataloader(args, dataset, non_verbose=False, **dataloader_args
     Returns:
         the dataloader object
     """
-    num_classes_per_task = args.ncls_per_task
-    total_classes = len(set(dataset.targets.numpy().tolist()))
-    TARGET_CLASSES = random.sample(range(total_classes), k=num_classes_per_task)
-    print("ncls_per_task", num_classes_per_task)
-    print("Total classes: ", total_classes)
-    print("target classes: ", TARGET_CLASSES)
-    print("Dataset targets: ", dataset.targets, len(dataset.targets))
+    print("target classes: ", target_classes)
     n_cpus = 4 if not hasattr(os, 'sched_getaffinity') else len(os.sched_getaffinity(0))
     num_workers = min(8, n_cpus) if args.num_workers is None else args.num_workers  # limit to 8 cpus if not specified
     dataloader_args['num_workers'] = num_workers if 'num_workers' not in dataloader_args else dataloader_args['num_workers']
@@ -231,7 +225,10 @@ def create_seeded_dataloader(args, dataset, non_verbose=False, **dataloader_args
     init_fn = partial(worker_init_fn, num_workers=num_workers, seed=args.seed) if args.seed is not None else None
     dataloader_args['worker_init_fn'] = init_fn if 'worker_init_fn' not in dataloader_args else dataloader_args['worker_init_fn']
     dataloader_args['drop_last'] = True
-    indices = [i for i, label in enumerate(dataset.targets) if label in TARGET_CLASSES]
-    filtered_subset = Subset(dataset, indices)
-    return DataLoader(filtered_subset, **dataloader_args)
+    if len(target_classes) > 0:
+        indices = [i for i, label in enumerate(dataset.targets) if label in target_classes]
+        filtered_subset = Subset(dataset, indices)
+        return DataLoader(filtered_subset, **dataloader_args)
+    else:
+        return DataLoader(dataset, **dataloader_args)
 

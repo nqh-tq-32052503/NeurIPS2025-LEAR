@@ -59,7 +59,6 @@ class MNIST360(torch.utils.data.Dataset):
     """
 
     N_CLASSES = 9
-
     def __init__(self, args: Namespace, is_train: bool = False) -> None:
         super().__init__()
         self.num_rounds = 3
@@ -92,7 +91,7 @@ class MNIST360(torch.utils.data.Dataset):
                 self.remaining_training_items[self.train_classes[0]].pop(),
                 self.remaining_training_items[self.train_classes[1]].pop()]
 
-    def init_train_loaders(self) -> None:
+    def init_train_loaders(self, target_classes) -> None:
         """
         Initializes the train loader.
         """
@@ -121,12 +120,12 @@ class MNIST360(torch.utils.data.Dataset):
                     train_mask][k * numbers_per_batch:(k + 1) * numbers_per_batch]
                 tmp_train_dataset.transform = transforms.Compose(
                     [train_rotation, transforms.ToTensor()])
-                self.dataset[-1].append(create_seeded_dataloader(self.args, tmp_train_dataset, non_verbose=True,
+                self.dataset[-1].append(create_seeded_dataloader(self.args, tmp_train_dataset, target_classes=target_classes, non_verbose=True,
                                                                  batch_size=1, shuffle=True, num_workers=0))
                 self.remaining_training_items[-1].append(
                     tmp_train_dataset.data.shape[0])
 
-    def init_test_loaders(self) -> None:
+    def init_test_loaders(self, target_classes) -> None:
         """
         Initializes the test loader.
         """
@@ -151,7 +150,7 @@ class MNIST360(torch.utils.data.Dataset):
                 increase_per_iteration=360.0 / test_mask.sum())
             tmp_test_dataset.transform = transforms.Compose(
                 [test_rotation, transforms.ToTensor()])
-            self.dataset.append(create_seeded_dataloader(self.args, tmp_test_dataset, non_verbose=True,
+            self.dataset.append(create_seeded_dataloader(self.args, tmp_test_dataset, target_classes=target_classes, non_verbose=True,
                                                          batch_size=self.args.batch_size, shuffle=False, num_workers=0))
 
     def get_train_data(self) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -221,15 +220,16 @@ class MNIST360(torch.utils.data.Dataset):
         return x_test, y_test
 
     def reinit(self) -> None:
+        import random
         self.is_over = False
         self.completed_rounds, self.test_class, self.test_iteration = 0, 0, 0
 
         self.train_classes = [0, 1]
-
+        target_classes = random.sample(range(self.N_CLASSES), k=self.args.ncls_per_task)
         if self.is_train:
-            self.init_train_loaders()
+            self.init_train_loaders(target_classes)
         else:
-            self.init_test_loaders()
+            self.init_test_loaders(target_classes)
 
         if self.is_train:
             self.active_train_loaders = [

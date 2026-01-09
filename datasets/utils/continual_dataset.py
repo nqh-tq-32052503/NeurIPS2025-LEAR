@@ -6,6 +6,7 @@ from argparse import ArgumentParser, Namespace
 from typing import Callable, List, Optional, Tuple, Any, TYPE_CHECKING
 
 import torch
+import random
 import numpy as np
 import torch.nn as nn
 import torch.utils
@@ -532,11 +533,13 @@ def store_masked_loaders(train_dataset: Dataset, test_dataset: Dataset,
 
     # Finalize data, apply unlabeled mask
     train_dataset, test_dataset = _prepare_data_loaders(train_dataset, test_dataset, setting)
-
+    num_classes_per_task = setting.args.ncls_per_task
+    total_classes = setting.N_CLASSES
+    target_classes = random.sample(range(total_classes), k=num_classes_per_task)
     # Create dataloaders
-    train_loader = create_seeded_dataloader(setting.args, train_dataset,
+    train_loader = create_seeded_dataloader(setting.args, train_dataset, target_classes=target_classes,
                                             batch_size=setting.args.batch_size, shuffle=True, drop_last=setting.args.drop_last)
-    test_loader = create_seeded_dataloader(setting.args, test_dataset,
+    test_loader = create_seeded_dataloader(setting.args, test_dataset, target_classes=target_classes,
                                            batch_size=setting.args.batch_size, shuffle=False)
     setting.test_loaders.append(test_loader)
     setting.train_loader = train_loader
@@ -621,11 +624,13 @@ def getAllLoaders(train_dataset: Dataset, test_dataset: Dataset,
 
     # Finalize data, apply unlabeled mask
     train_dataset, test_dataset = _prepare_data_loaders(train_dataset, test_dataset, setting)
-
+    num_classes_per_task = setting.args.ncls_per_task
+    total_classes = setting.N_CLASSES
+    target_classes = random.sample(range(total_classes), k=num_classes_per_task)
     # Create dataloaders
-    train_loader = create_seeded_dataloader(setting.args, train_dataset,
-                                            batch_size=setting.args.batch_size, shuffle=True)
-    test_loader = create_seeded_dataloader(setting.args, test_dataset,
+    train_loader = create_seeded_dataloader(setting.args, train_dataset, target_classes=target_classes,
+                                            batch_size=setting.args.batch_size, shuffle=True, drop_last=setting.args.drop_last)
+    test_loader = create_seeded_dataloader(setting.args, test_dataset, target_classes=target_classes,
                                            batch_size=setting.args.batch_size, shuffle=False)
     setting.test_loader = test_loader
     setting.train_loader = train_loader
