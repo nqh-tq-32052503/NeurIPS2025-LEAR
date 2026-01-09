@@ -211,7 +211,7 @@ def create_seeded_dataloader(args, dataset, non_verbose=False, **dataloader_args
         the dataloader object
     """
     num_classes_per_task = args.ncls_per_task
-    TARGET_CLASSES = random.sample(dataset.targets, k=num_classes_per_task)
+    TARGET_CLASSES = random.sample(range(len(dataset.targets)), k=num_classes_per_task)
     n_cpus = 4 if not hasattr(os, 'sched_getaffinity') else len(os.sched_getaffinity(0))
     num_workers = min(8, n_cpus) if args.num_workers is None else args.num_workers  # limit to 8 cpus if not specified
     dataloader_args['num_workers'] = num_workers if 'num_workers' not in dataloader_args else dataloader_args['num_workers']
