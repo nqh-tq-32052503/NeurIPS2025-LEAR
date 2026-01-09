@@ -16,7 +16,7 @@ from functools import partial
 from typing import List
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 
 
 def warn_once(*msg):
@@ -166,7 +166,7 @@ def worker_init_fn(worker_id, num_workers, seed, rank=1):
     random.seed(worker_seed)
 
 
-def create_seeded_dataloader(args, dataset, non_verbose=False, **dataloader_args) -> DataLoader:
+def create_all_seeded_dataloader(args, dataset, non_verbose=False, **dataloader_args) -> DataLoader:
     """
     Creates a dataloader object from a dataset, setting the seeds for the workers (if `--seed` is set).
 
@@ -196,3 +196,36 @@ def create_seeded_dataloader(args, dataset, non_verbose=False, **dataloader_args
     dataloader_args['drop_last'] = True
 
     return DataLoader(dataset, **dataloader_args)
+
+def create_seeded_dataloader(args, dataset, non_verbose=False, **dataloader_args) -> DataLoader:
+    """
+    Creates a dataloader object from a dataset, setting the seeds for the workers (if `--seed` is set).
+
+    Args:
+        args: the arguments of the program
+        dataset: the dataset to be loaded
+        verbose: whether to print the number of workers
+        dataloader_args: external arguments of the dataloader
+
+    Returns:
+        the dataloader object
+    """
+    TARGET_CLASSES = [0, 1, 2, 3, 4] # First 5 classes
+    n_cpus = 4 if not hasattr(os, 'sched_getaffinity') else len(os.sched_getaffinity(0))
+    num_workers = min(8, n_cpus) if args.num_workers is None else args.num_workers  # limit to 8 cpus if not specified
+    dataloader_args['num_workers'] = num_workers if 'num_workers' not in dataloader_args else dataloader_args['num_workers']
+    if not non_verbose:
+        logging.info(f'Using {dataloader_args["num_workers"]} workers for the dataloader.')
+    if args.seed is not None:
+        worker_generator = torch.Generator()
+        worker_generator.manual_seed(args.seed)
+    else:
+        worker_generator = None
+    dataloader_args['generator'] = worker_generator if 'generator' not in dataloader_args else dataloader_args['generator']
+    init_fn = partial(worker_init_fn, num_workers=num_workers, seed=args.seed) if args.seed is not None else None
+    dataloader_args['worker_init_fn'] = init_fn if 'worker_init_fn' not in dataloader_args else dataloader_args['worker_init_fn']
+    dataloader_args['drop_last'] = True
+    indices = [i for i, label in enumerate(dataset.targets) if label in TARGET_CLASSES]
+    filtered_subset = Subset(dataset, indices)
+    return DataLoader(filtered_subset, **dataloader_args)
+
