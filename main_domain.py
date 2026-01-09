@@ -369,6 +369,7 @@ def main(args=None):
                 raise NotImplementedError('BF16 is not supported on this machine.')
 
     #dataset = get_dataset(args)
+    args.transform_type = "weak"
     datasets = get_all_datasets(args)
 
     # extend_args(args, dataset)
@@ -376,7 +377,7 @@ def main(args=None):
 
     # check_args(args, dataset=dataset)
     check_args(args, dataset=datasets[0])
-    args.transform_type = "weak"
+
     
     backbone = get_backbone(args)
     logging.info(f"Using backbone: {args.backbone}")
