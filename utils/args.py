@@ -218,6 +218,8 @@ def add_configuration_args(parser: ArgumentParser, args: Namespace) -> None:
                               help='The configuration used for this model. The available configurations are defined in the `models/config/<model>.yaml` file '
                               'and include a `default` (dataset-agostic) configuration and a `best` configuration (dataset-specific). '
                               'If not provided, the `default` configuration is used.')
+    config_group.add_argument('--list_datasets', type=str, help='List all the available configurations for the given dataset and exit.')
+    config_group.add_argument('--transform_type', type=str, default="weak", help='Specify the transform type to use for the dataset (overrides the default defined in the dataset configuration).')
 
 
 def add_initial_args(parser) -> ArgumentParser:
