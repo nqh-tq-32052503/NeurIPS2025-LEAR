@@ -170,7 +170,8 @@ class LEAR(ContinualModel):
 
     def observe(self, inputs, labels, not_aug_inputs, epoch=None):
         l2_distance = torch.nn.MSELoss()
-
+        # HSIC: Measure of dependence between global and local features
+        # Put negative sign because we want to maximize the dependence between them
         self.opt.zero_grad()
         if len(self.net.fcArr) > 1:
             # NOTE: Task tiếp theo
