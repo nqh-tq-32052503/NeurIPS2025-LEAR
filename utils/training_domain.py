@@ -203,13 +203,13 @@ def train_single_epoch(model: ContinualModel,
             data = next(train_iter)
         except StopIteration:
             break
-        if debug:
-            if i == 50:
-                break
-        if args.debug_mode and i > model.get_debug_iters():
-            break
-        if args.fitting_mode == 'iters' and model.task_iteration >= model.args.n_iters:
-            break
+        # if debug:
+        #     if i == 50:
+        #         break
+        # if args.debug_mode and i > model.get_debug_iters():
+        #     break
+        # if args.fitting_mode == 'iters' and model.task_iteration >= model.args.n_iters:
+        #     break
 
         inputs, labels, not_aug_inputs = data[0], data[1], data[2]
         inputs, labels = inputs.to(model.device), labels.to(model.device, dtype=torch.long)
