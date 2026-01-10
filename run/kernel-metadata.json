@@ -1,6 +1,6 @@
 {
-    "id": "nguyenhieuxt/run",
-    "title": "run",
+    "id": "nguyenhieuxt/test-kaggle-session",
+    "title": "Test-Kaggle-Session",
     "code_file": "template.ipynb",
     "language": "python",
     "kernel_type": "notebook",
