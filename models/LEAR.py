@@ -116,6 +116,7 @@ class LEAR(ContinualModel):
 
     def begin_task(self, dataset, threshold=0) -> None:
         train_loader = dataset.train_loader
+        min_idx = 0
         if self.current_task > 0:
             num_choose = 50
             with torch.no_grad():
@@ -168,8 +169,13 @@ class LEAR(ContinualModel):
 
                 min_idx = torch.argmin(torch.tensor(distances)).item()
                 self.net.CreateNewExper(min_idx, dataset.N_CLASSES)
-                if self.use_bilora:
-                    self.apply_bilora(min_idx)
+        
+         
+        if self.use_bilora:
+            if self.current_task == 0 and (self.args.skip_task_0 == 1):
+                pass 
+            else:
+                self.apply_bilora(min_idx)
 
         self.opt = self.get_optimizer()
 
