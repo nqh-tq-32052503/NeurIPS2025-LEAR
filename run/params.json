@@ -1,0 +1,15 @@
+{
+    "list_datasets" : "seq-cifar100,seq-cifar100,seq-cifar100",
+    "ncls_per_task" : 5,
+    "model" : "LEAR",
+    "lr" : 0.03,
+    "batch_size" : 32,
+    "n_epochs" : 2,
+    "num_workers" : 8,
+    "backbone" : "lear",
+    "transform_type" : "weak",
+    "use_bilora" : 1,
+    "apply_bilora_for" : "local",
+    "bilora_mode" : "separate",
+    "skip_task_0" : 0
+}
