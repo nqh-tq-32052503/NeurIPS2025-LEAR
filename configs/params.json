@@ -1,5 +1,6 @@
 {
     "list_datasets" : "seq-cifar100,seq-cifar100,seq-cifar100",
+    "dataset" : "seq-cifar100",
     "ncls_per_task" : 5,
     "model" : "LEAR",
     "lr" : 0.03,
