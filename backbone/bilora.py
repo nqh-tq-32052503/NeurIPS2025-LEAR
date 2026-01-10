@@ -123,7 +123,7 @@ def FFT_SHIFT(matrix):
                 m_clone[i][j+n] = matrix[m+i][j]
         return m_clone        
 
-class Attention_LoRA_FFT(Attention_LoRA):
+class Attention_LoRA_FFT_Separate(Attention_LoRA):
     def __init__(self, dim, num_heads=8, qkv_bias=False, qk_scale=None, attn_drop=0., proj_drop=0., r=64, n_tasks=10, n_frq=3000, indices=None):
         super().__init__(dim, num_heads, qkv_bias, qk_scale, attn_drop, proj_drop, r, n_tasks)
 
@@ -168,9 +168,52 @@ class Attention_LoRA_FFT(Attention_LoRA):
         x = self.proj_drop(x)
         return x
 
+class Attention_LoRA_FFT_Aggregate(Attention_LoRA):
+    def __init__(self, dim, num_heads=8, qkv_bias=False, qk_scale=None, attn_drop=0., proj_drop=0., r=64, n_tasks=10, n_frq=3000, list_indices=None):
+        super().__init__(dim, num_heads, qkv_bias, qk_scale, attn_drop, proj_drop, r, n_tasks)
+
+        self.n_frq = n_frq
+        self.list_indices = list_indices
+        self.current_task = len(list_indices)
+        self.coef_k = nn.ParameterList([nn.Parameter(torch.randn(self.n_frq), requires_grad=True) for _ in range(self.current_task)]).to(self.qkv.weight.device)
+        self.coef_v = nn.ParameterList([nn.Parameter(torch.randn(self.n_frq), requires_grad=True) for _ in range(self.current_task)]).to(self.qkv.weight.device)
+        
+
+    
+    def get_delta_w_k(self, task, alpha=300):
+        indices = self.list_indices[task]
+        F = torch.zeros(self.dim, self.dim).to(self.qkv.weight.device)
+        F[indices[0,:], indices[1,:]] =  self.coef_k[task]
+        return torch.fft.ifft2(F, dim=(-2,-1)).real * alpha
+    
+    def get_delta_w_v(self, task, alpha=300):
+        indices = self.list_indices[task]
+        F = torch.zeros(self.dim, self.dim).to(self.qkv.weight.device)
+        F[indices[0,:], indices[1,:]] =  self.coef_v[task]
+        return torch.fft.ifft2(F, dim=(-2,-1)).real * alpha
+
+    def forward(self, x, **kwargs):
+        B, N, C = x.shape
+        qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
+        q, k, v = qkv[0], qkv[1], qkv[2]   # make torchscript happy (cannot use tensor as tuple)
+
+        weight_k = torch.stack([self.get_delta_w_k(t) for t in range(self.current_task)], dim=0).sum(dim=0)
+        weight_v = torch.stack([self.get_delta_w_v(t) for t in range(self.current_task)], dim=0).sum(dim=0)
+        k = k + F.linear(x, weight_k).reshape(B, N, self.num_heads, C // self.num_heads).permute(0, 2, 1, 3)
+        v = v + F.linear(x, weight_v).reshape(B, N, self.num_heads, C // self.num_heads).permute(0, 2, 1, 3)
+
+        attn = (q @ k.transpose(-2, -1)) * self.scale
+        attn = attn.softmax(dim=-1)
+        attn = self.attn_drop(attn) 
+
+        x = (attn @ v).transpose(1, 2).reshape(B, N, C)
+        x = self.proj(x)
+        x = self.proj_drop(x)
+        return x
+
 
 class BiLoRA_Manager(object):
-    def __init__(self, dim, num_heads=12, qkv_bias=False, qk_scale=None, attn_drop=0., proj_drop=0., r=64, n_tasks=10, n_frq=3000, device="cuda"):
+    def __init__(self, dim, num_heads=12, qkv_bias=False, qk_scale=None, attn_drop=0., proj_drop=0., r=64, n_tasks=10, n_frq=3000, device="cuda", mode="separate"):
         self.dim = dim
         self.device = device
         self.n_tasks = n_tasks
@@ -183,17 +226,31 @@ class BiLoRA_Manager(object):
         self.r = r
         self.indices = [self.select_pos(t, self.dim).to(self.device) for t in range(n_tasks)]
         self.weights = []
+        self.mode = mode
 
-    def get_bilora_attn(self, task):
+    def get_bilora_attn_separate(self, task):
         indices = self.indices[task]
-        return Attention_LoRA_FFT(dim=self.dim, num_heads=self.num_heads, qkv_bias=self.qkv_bias,
+        return Attention_LoRA_FFT_Separate(dim=self.dim, num_heads=self.num_heads, qkv_bias=self.qkv_bias,
                                   qk_scale=self.qk_scale, attn_drop=self.attn_drop, proj_drop=self.proj_drop,
                                   r=self.r, n_tasks=self.n_tasks, n_frq=self.n_frq, indices=indices).to(self.device)
+    
+    def get_bilora_attn_aggregate(self, task):
+        list_indices = self.indices[:(task + 1)]
+        return Attention_LoRA_FFT_Aggregate(dim=self.dim, num_heads=self.num_heads, qkv_bias=self.qkv_bias,
+                                  qk_scale=self.qk_scale, attn_drop=self.attn_drop, proj_drop=self.proj_drop,
+                                  r=self.r, n_tasks=self.n_tasks, n_frq=self.n_frq, list_indices=list_indices).to(self.device)
+        
+    
+    def get_bilora_attn(self, task):
+        if self.mode == "separate":
+            return self.get_bilora_attn_separate(task=task)
+        elif self.mode == "aggregate":
+            return self.get_bilora_attn_aggregate(task=task)
         
     def select_pos(self, t, dim, seed=777):
         indices = torch.randperm(dim * dim, generator=torch.Generator().manual_seed(seed+t*10))[:self.n_frq]
         indices = torch.stack([indices // dim, indices % dim], dim=0)
         return indices
 
-    def save_bilora_attn(self, bilora_attn: Attention_LoRA_FFT):
+    def save_bilora_attn(self, bilora_attn: Attention_LoRA):
         self.weights.append(bilora_attn.state_dict())
