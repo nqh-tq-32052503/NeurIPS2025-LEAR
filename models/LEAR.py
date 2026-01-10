@@ -37,6 +37,8 @@ class LEAR(ContinualModel):
         self.iter = 0
         self.use_bilora = True if args.use_bilora == 1 else False
         print("Use BiLORA: ", self.use_bilora)
+        self.apply_bilora_for = args.apply_bilora_for
+        print("Apply BiLORA for: ", self.apply_bilora_for)
         if self.use_bilora:
             self.init_bilora()
 
@@ -237,22 +239,26 @@ class LEAR(ContinualModel):
         return distances
 
     def init_bilora(self):
-        self.global_bilora_managers = [BiLoRA_Manager(dim=768), BiLoRA_Manager(dim=768), BiLoRA_Manager(dim=768)]
-        self.local_bilora_managers = [BiLoRA_Manager(dim=768), BiLoRA_Manager(dim=768), BiLoRA_Manager(dim=768)]
+        if self.apply_bilora_for in ["global", "both"]:
+            self.global_bilora_managers = [BiLoRA_Manager(dim=768), BiLoRA_Manager(dim=768), BiLoRA_Manager(dim=768)]
+        if self.apply_bilora_for in ["local", "both"]:
+            self.local_bilora_managers = [BiLoRA_Manager(dim=768), BiLoRA_Manager(dim=768), BiLoRA_Manager(dim=768)]
 
     def apply_bilora(self, selected_index):
         print("Applying BiLORA technique for current task: ", self._current_task, " at index: ", selected_index)
-        for i in range(len(self.global_bilora_managers)):
-            self.net.global_vitmodel.blocks[-i].attn = self.global_bilora_managers[-i].get_bilora_attn(task=self._current_task)
-            if len(self.global_bilora_managers[-i].weights) > 0:
-                selected_weight = self.global_bilora_managers[-i].weights[selected_index]
-                self.net.global_vitmodel.blocks[-i].attn.load_state_dict(selected_weight)
+        if self.apply_bilora_for in ["global", "both"]:
+            for i in range(len(self.global_bilora_managers)):
+                self.net.global_vitmodel.blocks[-i].attn = self.global_bilora_managers[-i].get_bilora_attn(task=self._current_task)
+                if len(self.global_bilora_managers[-i].weights) > 0:
+                    selected_weight = self.global_bilora_managers[-i].weights[selected_index]
+                    self.net.global_vitmodel.blocks[-i].attn.load_state_dict(selected_weight)
         
-        for i in range(len(self.local_bilora_managers)):
-            self.net.local_vitmodel.blocks[-i].attn = self.local_bilora_managers[-i].get_bilora_attn(task=self._current_task)
-            if len(self.local_bilora_managers[-i].weights) > 0:
-                selected_weight = self.local_bilora_managers[-i].weights[selected_index]
-                self.net.local_vitmodel.blocks[-i].attn.load_state_dict(selected_weight)
+        if self.apply_bilora_for in ["local", "both"]:
+            for i in range(len(self.local_bilora_managers)):
+                self.net.local_vitmodel.blocks[-i].attn = self.local_bilora_managers[-i].get_bilora_attn(task=self._current_task)
+                if len(self.local_bilora_managers[-i].weights) > 0:
+                    selected_weight = self.local_bilora_managers[-i].weights[selected_index]
+                    self.net.local_vitmodel.blocks[-i].attn.load_state_dict(selected_weight)
 
 def kl_loss(student_feat, teacher_feat):
     student_feat = F.normalize(student_feat, p=2, dim=1)
