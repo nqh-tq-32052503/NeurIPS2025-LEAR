@@ -1,3 +1,4 @@
+# --apply_bilora_for local --bilora_mode separate --skip_task_0 0
 [INFO CMD] Running:  python main_domain.py --list_datasets seq-cifar100,seq-cifar100,seq-cifar100 --dataset seq-cifar100 --ncls_per_task 5 --model LEAR --lr 0.03 --batch_size 32 --n_epochs 5 --num_workers 8 --backbone lear --transform_type weak --use_bilora 1 --apply_bilora_for local --bilora_mode separate --skip_task_0 0
 [INFO] 10-Jan-26 17:49:24 - Running Mammoth! on 04dc83e5ff9c. (if you see this message more than once, you are probably importing something wrong)
 /usr/local/lib/python3.11/dist-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
@@ -93,13 +94,13 @@ Applying BiLORA technique for current task:  3  at index:  1
 Applying BiLORA technique for current task:  3  at index:  1
 Evaluating Task 3:  20%|███████████████████▌                                                                              | 9/45 [00:05<00:23,  1.56it/s, acc_task_3=92.7]
 Accuracy for 3 task(s): 	 [Class-IL]: 50.69 % 	 [Task-IL]: 0.0 %
-	Raw accuracy values: Class-IL [34.375, 25.0, 92.70833333333334] | Task-IL [0, 0, 0]
+## 	Raw accuracy values: Class-IL [34.375, 25.0, 92.70833333333334] | Task-IL [0, 0, 0]
 
 
 Applying BiLORA technique for current task:  3  at index:  2
 Applying BiLORA technique for current task:  3  at index:  2
 Applying BiLORA technique for current task:  3  at index:  2
-System stats:
+## System stats:
 	Initial CPU memory usage: 2780.89 MB
 	Average CPU memory usage: 3851.34 MB
 	Final CPU memory usage: 4474.70 MB
@@ -109,6 +110,7 @@ System stats:
 	Final GPU 0 memory usage: 6188.00 MB
 	Max GPU 0 memory usage: 6188.00 MB
 Logging results and arguments in ./data/results/class-il/seq-cifar100/LEAR/logs.pyd
+# --apply_bilora_for local --bilora_mode separate --skip_task_0 1
 [INFO CMD] Running:  python main_domain.py --list_datasets seq-cifar100,seq-cifar100,seq-cifar100 --dataset seq-cifar100 --ncls_per_task 5 --model LEAR --lr 0.03 --batch_size 32 --n_epochs 5 --num_workers 8 --backbone lear --transform_type weak --use_bilora 1 --apply_bilora_for local --bilora_mode separate --skip_task_0 1
 [INFO] 10-Jan-26 18:08:08 - Running Mammoth! on 04dc83e5ff9c. (if you see this message more than once, you are probably importing something wrong)
 /usr/local/lib/python3.11/dist-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
@@ -202,13 +204,13 @@ Applying BiLORA technique for current task:  3  at index:  1
 Applying BiLORA technique for current task:  3  at index:  1
 Evaluating Task 3:  20%|███████████████████▌                                                                              | 9/45 [00:05<00:23,  1.56it/s, acc_task_3=95.8]
 Accuracy for 3 task(s): 	 [Class-IL]: 46.18 % 	 [Task-IL]: 0.0 %
-	Raw accuracy values: Class-IL [0.0, 42.70833333333333, 95.83333333333334] | Task-IL [0, 0, 0]
+##	Raw accuracy values: Class-IL [0.0, 42.70833333333333, 95.83333333333334] | Task-IL [0, 0, 0]
 
 
 Applying BiLORA technique for current task:  3  at index:  2
 Applying BiLORA technique for current task:  3  at index:  2
 Applying BiLORA technique for current task:  3  at index:  2
-System stats:
+## System stats:
 	Initial CPU memory usage: 2648.84 MB
 	Average CPU memory usage: 3627.97 MB
 	Final CPU memory usage: 4209.46 MB
@@ -218,6 +220,7 @@ System stats:
 	Final GPU 0 memory usage: 6216.00 MB
 	Max GPU 0 memory usage: 6214.00 MB
 Logging results and arguments in ./data/results/class-il/seq-cifar100/LEAR/logs.pyd
+# --apply_bilora_for local --bilora_mode aggregate --skip_task_0 0
 [INFO CMD] Running:  python main_domain.py --list_datasets seq-cifar100,seq-cifar100,seq-cifar100 --dataset seq-cifar100 --ncls_per_task 5 --model LEAR --lr 0.03 --batch_size 32 --n_epochs 5 --num_workers 8 --backbone lear --transform_type weak --use_bilora 1 --apply_bilora_for local --bilora_mode aggregate --skip_task_0 0
 [INFO] 10-Jan-26 18:25:03 - Running Mammoth! on 04dc83e5ff9c. (if you see this message more than once, you are probably importing something wrong)
 /usr/local/lib/python3.11/dist-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
@@ -312,13 +315,13 @@ Applying BiLORA technique for current task:  3  at index:  0
 Applying BiLORA technique for current task:  3  at index:  0
 Evaluating Task 3:  20%|███████████████████▌                                                                              | 9/45 [00:06<00:24,  1.50it/s, acc_task_3=97.9]
 Accuracy for 3 task(s): 	 [Class-IL]: 65.97 % 	 [Task-IL]: 0.0 %
-	Raw accuracy values: Class-IL [100.0, 0.0, 97.91666666666666] | Task-IL [0, 0, 0]
+##	Raw accuracy values: Class-IL [100.0, 0.0, 97.91666666666666] | Task-IL [0, 0, 0]
 
 
 Applying BiLORA technique for current task:  3  at index:  2
 Applying BiLORA technique for current task:  3  at index:  2
 Applying BiLORA technique for current task:  3  at index:  2
-System stats:
+## System stats:
 	Initial CPU memory usage: 2648.70 MB
 	Average CPU memory usage: 3622.40 MB
 	Final CPU memory usage: 4270.50 MB
@@ -328,6 +331,7 @@ System stats:
 	Final GPU 0 memory usage: 6190.00 MB
 	Max GPU 0 memory usage: 6190.00 MB
 Logging results and arguments in ./data/results/class-il/seq-cifar100/LEAR/logs.pyd
+# --apply_bilora_for local --bilora_mode aggregate --skip_task_0 1
 [INFO CMD] Running:  python main_domain.py --list_datasets seq-cifar100,seq-cifar100,seq-cifar100 --dataset seq-cifar100 --ncls_per_task 5 --model LEAR --lr 0.03 --batch_size 32 --n_epochs 5 --num_workers 8 --backbone lear --transform_type weak --use_bilora 1 --apply_bilora_for local --bilora_mode aggregate --skip_task_0 1
 [INFO] 10-Jan-26 18:43:27 - Running Mammoth! on 04dc83e5ff9c. (if you see this message more than once, you are probably importing something wrong)
 /usr/local/lib/python3.11/dist-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
@@ -421,13 +425,13 @@ Applying BiLORA technique for current task:  3  at index:  2
 Applying BiLORA technique for current task:  3  at index:  2
 Evaluating Task 3:  20%|███████████████████▌                                                                              | 9/45 [00:06<00:24,  1.48it/s, acc_task_3=90.6]
 Accuracy for 3 task(s): 	 [Class-IL]: 30.21 % 	 [Task-IL]: 0.0 %
-	Raw accuracy values: Class-IL [0.0, 0.0, 90.625] | Task-IL [0, 0, 0]
+##	Raw accuracy values: Class-IL [0.0, 0.0, 90.625] | Task-IL [0, 0, 0]
 
 
 Applying BiLORA technique for current task:  3  at index:  2
 Applying BiLORA technique for current task:  3  at index:  2
 Applying BiLORA technique for current task:  3  at index:  2
-System stats:
+## System stats:
 	Initial CPU memory usage: 2648.71 MB
 	Average CPU memory usage: 3660.61 MB
 	Final CPU memory usage: 4303.38 MB
@@ -437,6 +441,7 @@ System stats:
 	Final GPU 0 memory usage: 6216.00 MB
 	Max GPU 0 memory usage: 6214.00 MB
 Logging results and arguments in ./data/results/class-il/seq-cifar100/LEAR/logs.pyd
+# --apply_bilora_for both --bilora_mode separate --skip_task_0 0
 [INFO CMD] Running:  python main_domain.py --list_datasets seq-cifar100,seq-cifar100,seq-cifar100 --dataset seq-cifar100 --ncls_per_task 5 --model LEAR --lr 0.03 --batch_size 32 --n_epochs 5 --num_workers 8 --backbone lear --transform_type weak --use_bilora 1 --apply_bilora_for both --bilora_mode separate --skip_task_0 0
 [INFO] 10-Jan-26 19:00:33 - Running Mammoth! on 04dc83e5ff9c. (if you see this message more than once, you are probably importing something wrong)
 /usr/local/lib/python3.11/dist-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
@@ -531,13 +536,13 @@ Applying BiLORA technique for current task:  3  at index:  1
 Applying BiLORA technique for current task:  3  at index:  1
 Evaluating Task 3:  20%|███████████████████▌                                                                              | 9/45 [00:07<00:30,  1.19it/s, acc_task_3=80.2]
 Accuracy for 3 task(s): 	 [Class-IL]: 59.72 % 	 [Task-IL]: 0.0 %
-	Raw accuracy values: Class-IL [16.666666666666664, 82.29166666666666, 80.20833333333334] | Task-IL [0, 0, 0]
+##	Raw accuracy values: Class-IL [16.666666666666664, 82.29166666666666, 80.20833333333334] | Task-IL [0, 0, 0]
 
 
 Applying BiLORA technique for current task:  3  at index:  2
 Applying BiLORA technique for current task:  3  at index:  2
 Applying BiLORA technique for current task:  3  at index:  2
-System stats:
+## System stats:
 	Initial CPU memory usage: 2649.64 MB
 	Average CPU memory usage: 3789.96 MB
 	Final CPU memory usage: 4528.64 MB
@@ -547,6 +552,7 @@ System stats:
 	Final GPU 0 memory usage: 8934.00 MB
 	Max GPU 0 memory usage: 8934.00 MB
 Logging results and arguments in ./data/results/class-il/seq-cifar100/LEAR/logs.pyd
+# --apply_bilora_for both --bilora_mode separate --skip_task_0 1
 [INFO CMD] Running:  python main_domain.py --list_datasets seq-cifar100,seq-cifar100,seq-cifar100 --dataset seq-cifar100 --ncls_per_task 5 --model LEAR --lr 0.03 --batch_size 32 --n_epochs 5 --num_workers 8 --backbone lear --transform_type weak --use_bilora 1 --apply_bilora_for both --bilora_mode separate --skip_task_0 1
 [INFO] 10-Jan-26 19:23:17 - Running Mammoth! on 04dc83e5ff9c. (if you see this message more than once, you are probably importing something wrong)
 /usr/local/lib/python3.11/dist-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
@@ -640,13 +646,13 @@ Applying BiLORA technique for current task:  3  at index:  1
 Applying BiLORA technique for current task:  3  at index:  1
 Evaluating Task 3:  20%|████████████████████                                                                                | 9/45 [00:07<00:29,  1.23it/s, acc_task_3=74]
 Accuracy for 3 task(s): 	 [Class-IL]: 56.25 % 	 [Task-IL]: 0.0 %
-	Raw accuracy values: Class-IL [0.0, 94.79166666666666, 73.95833333333334] | Task-IL [0, 0, 0]
+##	Raw accuracy values: Class-IL [0.0, 94.79166666666666, 73.95833333333334] | Task-IL [0, 0, 0]
 
 
 Applying BiLORA technique for current task:  3  at index:  2
 Applying BiLORA technique for current task:  3  at index:  2
 Applying BiLORA technique for current task:  3  at index:  2
-System stats:
+## System stats:
 	Initial CPU memory usage: 2647.53 MB
 	Average CPU memory usage: 3709.07 MB
 	Final CPU memory usage: 4417.75 MB
@@ -656,6 +662,7 @@ System stats:
 	Final GPU 0 memory usage: 8888.00 MB
 	Max GPU 0 memory usage: 8888.00 MB
 Logging results and arguments in ./data/results/class-il/seq-cifar100/LEAR/logs.pyd
+# --apply_bilora_for both --bilora_mode aggregate --skip_task_0 0
 [INFO CMD] Running:  python main_domain.py --list_datasets seq-cifar100,seq-cifar100,seq-cifar100 --dataset seq-cifar100 --ncls_per_task 5 --model LEAR --lr 0.03 --batch_size 32 --n_epochs 5 --num_workers 8 --backbone lear --transform_type weak --use_bilora 1 --apply_bilora_for both --bilora_mode aggregate --skip_task_0 0
 [INFO] 10-Jan-26 19:43:27 - Running Mammoth! on 04dc83e5ff9c. (if you see this message more than once, you are probably importing something wrong)
 /usr/local/lib/python3.11/dist-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
@@ -750,13 +757,13 @@ Applying BiLORA technique for current task:  3  at index:  0
 Applying BiLORA technique for current task:  3  at index:  0
 Evaluating Task 3:  20%|███████████████████▌                                                                              | 9/45 [00:07<00:31,  1.14it/s, acc_task_3=77.1]
 Accuracy for 3 task(s): 	 [Class-IL]: 25.69 % 	 [Task-IL]: 0.0 %
-	Raw accuracy values: Class-IL [0.0, 0.0, 77.08333333333334] | Task-IL [0, 0, 0]
+##	Raw accuracy values: Class-IL [0.0, 0.0, 77.08333333333334] | Task-IL [0, 0, 0]
 
 
 Applying BiLORA technique for current task:  3  at index:  2
 Applying BiLORA technique for current task:  3  at index:  2
 Applying BiLORA technique for current task:  3  at index:  2
-System stats:
+## System stats:
 	Initial CPU memory usage: 2648.54 MB
 	Average CPU memory usage: 3803.34 MB
 	Final CPU memory usage: 4575.53 MB
@@ -766,6 +773,7 @@ System stats:
 	Final GPU 0 memory usage: 8914.00 MB
 	Max GPU 0 memory usage: 8914.00 MB
 Logging results and arguments in ./data/results/class-il/seq-cifar100/LEAR/logs.pyd
+# --apply_bilora_for both --bilora_mode aggregate --skip_task_0 1
 [INFO CMD] Running:  python main_domain.py --list_datasets seq-cifar100,seq-cifar100,seq-cifar100 --dataset seq-cifar100 --ncls_per_task 5 --model LEAR --lr 0.03 --batch_size 32 --n_epochs 5 --num_workers 8 --backbone lear --transform_type weak --use_bilora 1 --apply_bilora_for both --bilora_mode aggregate --skip_task_0 1
 [INFO] 10-Jan-26 20:06:30 - Running Mammoth! on 04dc83e5ff9c. (if you see this message more than once, you are probably importing something wrong)
 /usr/local/lib/python3.11/dist-packages/pydantic/_internal/_generate_schema.py:2249: UnsupportedFieldAttributeWarning: The 'repr' attribute with value False was provided to the `Field()` function, which has no effect in the context it was used. 'repr' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
@@ -859,13 +867,13 @@ Applying BiLORA technique for current task:  3  at index:  1
 Applying BiLORA technique for current task:  3  at index:  1
 Evaluating Task 3:  20%|███████████████████▌                                                                              | 9/45 [00:07<00:31,  1.14it/s, acc_task_3=87.5]
 Accuracy for 3 task(s): 	 [Class-IL]: 57.29 % 	 [Task-IL]: 0.0 %
-	Raw accuracy values: Class-IL [17.708333333333336, 66.66666666666666, 87.5] | Task-IL [0, 0, 0]
+##	Raw accuracy values: Class-IL [17.708333333333336, 66.66666666666666, 87.5] | Task-IL [0, 0, 0]
 
 
 Applying BiLORA technique for current task:  3  at index:  2
 Applying BiLORA technique for current task:  3  at index:  2
 Applying BiLORA technique for current task:  3  at index:  2
-System stats:
+## System stats:
 	Initial CPU memory usage: 2648.73 MB
 	Average CPU memory usage: 3777.44 MB
 	Final CPU memory usage: 4571.80 MB

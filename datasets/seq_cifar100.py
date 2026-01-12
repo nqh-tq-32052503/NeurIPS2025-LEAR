@@ -96,7 +96,6 @@ class SequentialCIFAR100(ContinualDataset):
          transforms.RandomHorizontalFlip(),
          transforms.ToTensor(),
          transforms.Normalize(MEAN, STD)])
-
     def get_data_loaders(self) -> Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
         transform = self.TRANSFORM
 
@@ -123,7 +122,7 @@ class SequentialCIFAR100(ContinualDataset):
                                   download=True, transform=transform)
         test_dataset = TCIFAR100(base_path() + 'CIFAR100', train=False,
                                 download=True, transform=test_transform)
-
+        
         train, test = getAllLoaders(train_dataset, test_dataset, self)
         return train, test
 
