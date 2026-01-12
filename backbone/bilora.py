@@ -264,3 +264,100 @@ class BiLoRA_Manager(object):
     def save_bilora_attn(self, bilora_attn: Attention_LoRA):
         saved_bilora_attn = copy.deepcopy(bilora_attn)
         self.weights.append(saved_bilora_attn)
+        
+class MoE(nn.Module):
+    def __init__(self, dim, num_experts, n_frq, n_tasks, topk, device, **kwargs):
+        super().__init__()
+        self.dim = dim
+        self.device = device
+        self.n_frq = n_frq
+        self.n_tasks = n_tasks
+        self.topk = topk
+        self.num_experts = num_experts
+        self.full_permutation = torch.randperm(dim * dim, generator=torch.Generator().manual_seed(42)).tolist()
+        self.router = nn.Linear(dim, num_experts)
+        self.coeff = nn.Parameter(torch.randn(num_experts, n_frq), requires_grad=True).to(self.device)
+        self.create_bilora_indices()
+        
+    def create_bilora_indices(self):
+        list_indices = [torch.tensor(self.full_permutation[t * self.n_frq : (t + 1) * self.n_frq], device=self.device) for t in range(self.num_experts)]
+        self.list_indices = torch.stack(list_indices, dim=0).to(self.device)
+
+    def vectorized_forward(self, batch_expert_weights, batch_expert_indices, alpha=300):
+        """
+        batch_expert_weights: (B, topk)
+        batch_expert_indices: (B, topk)
+        """
+        B, topk = batch_expert_indices.shape
+        device = self.device
+        all_selected_indices = self.list_indices[batch_expert_indices]
+        row_indices = all_selected_indices // self.dim
+        col_indices = all_selected_indices % self.dim
+        current_coeffs = self.coeff[batch_expert_indices] 
+        weighted_coeffs = current_coeffs * batch_expert_weights.unsqueeze(-1)
+        fft_mask_4d = torch.zeros(B, topk, self.dim, self.dim, device=device)
+        batch_idx = torch.arange(B, device=device).view(B, 1, 1)
+        topk_idx = torch.arange(topk, device=device).view(1, topk, 1)
+        fft_mask_4d[batch_idx, topk_idx, row_indices, col_indices] = weighted_coeffs
+        aggregated_freq_mask = fft_mask_4d.sum(dim=1) # (B, dim, dim)
+        final_output = torch.fft.ifft2(aggregated_freq_mask, dim=(-2, -1)).real * alpha
+        return final_output # Kết quả: (B, dim, dim)
+    
+    def unvectorized_forward(self, batch_expert_weights, batch_expert_indices, alpha=300):
+        outputs = []
+        for expert_weights, expert_indices in zip(batch_expert_weights, batch_expert_indices):
+            list_fft_masks = []
+            for expert_weight, expert_index in zip(expert_weights, expert_indices):
+                selected_indices = self.list_indices[expert_index]
+                mask_indices = torch.stack([selected_indices // self.dim, selected_indices % self.dim], dim=0) 
+                fft_mask = torch.zeros(self.dim, self.dim).to(self.device)
+                fft_mask[mask_indices[0,:], mask_indices[1,:]] =  self.coeff[expert_index]
+                fft_mask = torch.fft.ifft2(fft_mask, dim=(-2,-1)).real * alpha
+                weighted_fft_mask = expert_weight * fft_mask
+                list_fft_masks.append(weighted_fft_mask)
+            aggregated_fft_mask = torch.stack(list_fft_masks, dim=0).sum(dim=0)
+            outputs.append(aggregated_fft_mask)
+        return torch.stack(outputs, dim=0)
+    
+    def forward(self, cls_token, **kwargs):
+        alpha = 300
+        router_logits = self.router(cls_token)
+        batch_expert_weights, batch_expert_indices = torch.topk(F.softmax(router_logits, dim=-1), self.topk, dim=-1)
+        batch_expert_weights = batch_expert_weights / batch_expert_weights.sum(dim=-1, keepdim=True)
+        outputs = self.vectorized_forward(batch_expert_weights, batch_expert_indices, alpha=alpha)
+        return outputs
+        
+class BiLORA_MoE(Attention_LoRA):
+    def __init__(self, dim, num_heads=8, qkv_bias=False, qk_scale=None, attn_drop=0., proj_drop=0., r=64, n_tasks=10, n_frq=3000, num_experts=20, topk=5):
+        super().__init__(dim, num_heads, qkv_bias, qk_scale, attn_drop, proj_drop, r, n_tasks)
+        self.num_experts= num_experts
+        self.n_tasks = n_tasks
+        assert num_experts < (dim * dim) / n_frq, "Number of experts is too large"
+        self.topk = topk
+        self.n_frq = n_frq
+        self.moe_k = MoE(dim=dim, num_experts=num_experts, n_frq=n_frq, n_tasks=n_tasks, topk=topk, device=self.qkv.weight.device)
+        self.moe_v = MoE(dim=dim, num_experts=num_experts, n_frq=n_frq, n_tasks=n_tasks, topk=topk, device=self.qkv.weight.device)
+    
+    def to(self, device):
+        self.moe_k.to(device)
+        self.moe_v.to(device)
+    
+    def forward(self, x: torch.Tensor, **kwargs):
+        B, N, C = x.shape
+        qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
+        q, k, v = qkv[0], qkv[1], qkv[2] 
+        weight_k = self.moe_k(x[:, 0, :])
+        weight_v = self.moe_v(x[:, 0, :])
+        
+        k = k + F.linear(x, weight_k).reshape(B, N, self.num_heads, C // self.num_heads).permute(0, 2, 1, 3)
+        v = v + F.linear(x, weight_v).reshape(B, N, self.num_heads, C // self.num_heads).permute(0, 2, 1, 3)
+
+        attn = (q @ k.transpose(-2, -1)) * self.scale
+        attn = attn.softmax(dim=-1)
+        attn = self.attn_drop(attn) 
+
+        x = (attn @ v).transpose(1, 2).reshape(B, N, C)
+        x = self.proj(x)
+        x = self.proj_drop(x)
+        return x
+        
