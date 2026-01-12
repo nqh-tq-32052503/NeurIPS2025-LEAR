@@ -10,7 +10,7 @@ import os
 import sys
 from argparse import Namespace
 from time import time
-from typing import Iterable, Tuple
+from typing import Iterable, Tuple, List
 import logging
 import torch
 from tqdm import tqdm
@@ -254,7 +254,7 @@ def train_single_epoch(model: ContinualModel,
 
 
 
-def train(model: ContinualModel, datasets,
+def train(model: ContinualModel, datasets: List[ContinualDataset],
           args: Namespace) -> None:
     """
     The training process, including evaluations and loggers.
@@ -301,7 +301,7 @@ def train(model: ContinualModel, datasets,
             print('begin task ' + str(t + 1) + ', dataset:' + datasets[t].NAME)
 
             model.net.train()
-
+            datasets[t].GENERATED_CLASSES = []
             train_loader, test_loader = datasets[t].get_all_data_loaders()
 
             test_loaders.append(test_loader)

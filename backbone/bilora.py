@@ -2,7 +2,7 @@ import math
 import logging
 from functools import partial
 from collections import OrderedDict
-
+import copy
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -224,7 +224,11 @@ class BiLoRA_Manager(object):
         self.attn_drop = attn_drop
         self.proj_drop = proj_drop
         self.r = r
-        self.indices = [self.select_pos(t, self.dim).to(self.device) for t in range(n_tasks)]
+        self.full_permutation = torch.randperm(
+            dim * dim, 
+            generator=torch.Generator().manual_seed(42)
+        )
+        self.indices = [self.select_pos(t).to(self.device) for t in range(n_tasks)]
         self.weights = []
         self.mode = mode
 
@@ -247,10 +251,16 @@ class BiLoRA_Manager(object):
         elif self.mode == "aggregate":
             return self.get_bilora_attn_aggregate(task=task)
         
-    def select_pos(self, t, dim, seed=777):
-        indices = torch.randperm(dim * dim, generator=torch.Generator().manual_seed(seed+t*10))[:self.n_frq]
-        indices = torch.stack([indices // dim, indices % dim], dim=0)
-        return indices
+    def select_pos(self, t):
+        """
+        t: index của tập dữ liệu (ví dụ 0, 1, 2... 9)
+        """
+        start = t * self.n_frq
+        end = (t + 1) * self.n_frq
+        indices = self.full_permutation[start:end]
+        indices_2d = torch.stack([indices // self.dim, indices % self.dim], dim=0)
+        return indices_2d
 
     def save_bilora_attn(self, bilora_attn: Attention_LoRA):
-        self.weights.append(bilora_attn.state_dict())
+        saved_bilora_attn = copy.deepcopy(bilora_attn)
+        self.weights.append(saved_bilora_attn)

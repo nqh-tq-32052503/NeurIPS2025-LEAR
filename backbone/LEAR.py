@@ -82,9 +82,9 @@ class LEAR(MammothBackbone):
     def CreateNewExper(self, idx, num_classes):
         new_fc_dim = self.fc_dim
         new_fc = nn.Linear(self.model_dim, new_fc_dim, device=self.device)
-        new_fc.load_state_dict(self.fcArr[idx].state_dict())
+        # new_fc.load_state_dict(self.fcArr[idx].state_dict())
         # self.classifier.load_state_dict(self.classifierArr[idx].state_dict())
-        print('load expert ' + str(idx + 1) + ' parameters')
+        # print('load expert ' + str(idx + 1) + ' parameters')
         self.fcArr.append(new_fc)
         self.classifier = nn.Linear(self.model_dim + new_fc_dim, num_classes, device=self.device)
         self.classifierArr.append(self.classifier)
@@ -97,7 +97,7 @@ class LEAR(MammothBackbone):
         self.device = device
         return super().to(device, **kwargs)
 
-    def forward_expert(self, global_features, local_features):
+    def forward_expert(self, global_features, local_features, return_features=False):
         fcfeatures = self.fcArr[self.c_expert](local_features)
         final_features = torch.cat((global_features, fcfeatures), dim=1)
         out = self.classifierArr[self.c_expert](final_features)
@@ -107,11 +107,11 @@ class LEAR(MammothBackbone):
         if return_features:
             Freezed_global_features, Freezed_local_features, global_features, local_features = self.forward_fusion(x,
                                                                                                                    return_features=True)
-            return self.forward_expert(global_features,
-                                       local_features), Freezed_global_features, Freezed_local_features, global_features, local_features
+            outputs = self.forward_expert(global_features, local_features, return_features=return_features)
+            return  outputs, Freezed_global_features, Freezed_local_features, global_features, local_features
         else:
             global_features, local_features = self.forward_fusion(x)
-            return self.forward_expert(global_features, local_features), global_features, local_features
+            return self.forward_expert(global_features, local_features, return_features=return_features), global_features, local_features
 
     def forward_fusion(self, x, return_features=False):
 
