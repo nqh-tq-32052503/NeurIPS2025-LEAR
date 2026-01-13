@@ -221,10 +221,6 @@ def add_configuration_args(parser: ArgumentParser, args: Namespace) -> None:
     config_group.add_argument('--list_datasets', type=str, help='List all the available configurations for the given dataset and exit.')
     config_group.add_argument('--transform_type', type=str, default="weak", help='Specify the transform type to use for the dataset (overrides the default defined in the dataset configuration).')
     config_group.add_argument('--ncls_per_task', type=int, help="Number of classes for each task during training. If the dataset at current task has more than N classes, randomly choose N classes from them")
-    config_group.add_argument('--use_bilora', default=0, type=int, help="Whether to apply BiLoRA to model or not")
-    config_group.add_argument('--apply_bilora_for', type=str, default="both", help="Whether to apply BiLORA for global backbone or local backbone or both of them")
-    config_group.add_argument('--skip_task_0', default=0, type=int)
-    config_group.add_argument('--bilora_mode', type=str, default="separate", help="BiLORA mode: separate, aggregate")
 
 def add_initial_args(parser) -> ArgumentParser:
     """
