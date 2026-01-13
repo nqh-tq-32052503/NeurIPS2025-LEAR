@@ -18,7 +18,7 @@ import random
 import copy
 from torch.distributions import MultivariateNormal
 from scipy.stats import multivariate_normal
-from backbone.bilora import BiLoRA_Manager
+from backbone.bilora import BiLORA_MoE
 
 
 class LEAR(ContinualModel):
@@ -170,19 +170,10 @@ class LEAR(ContinualModel):
 
                 min_idx = torch.argmin(torch.tensor(distances)).item()
                 self.net.CreateNewExper(min_idx, dataset.N_CLASSES)
-        
-         
-        if self.use_bilora:
-            if self.current_task == 0 and (self.args.skip_task_0 == 1):
-                pass 
-            else:
-                self.apply_bilora(min_idx)
 
         self.opt = self.get_optimizer()
 
     def myPrediction(self,x,k):
-        if self._current_task > 0:
-            self.apply_bilora(selected_index=k)
         with torch.no_grad():
             #Perform the prediction according to the seloeced expert
             out = self.net.myprediction(x,k)
@@ -246,26 +237,13 @@ class LEAR(ContinualModel):
         return distances
 
     def init_bilora(self):
+        print("[INFO] Initializing BiLoRA MoE")
         if self.apply_bilora_for in ["global", "both"]:
-            self.global_bilora_managers = [BiLoRA_Manager(dim=768, mode=self.bilora_mode), BiLoRA_Manager(dim=768, mode=self.bilora_mode), BiLoRA_Manager(dim=768, mode=self.bilora_mode)]
+            for i in range(3):
+                self.net.global_vitmodel.blocks[9 + i].attn = BiLORA_MoE(dim=768)
         if self.apply_bilora_for in ["local", "both"]:
-            self.local_bilora_managers = [BiLoRA_Manager(dim=768, mode=self.bilora_mode), BiLoRA_Manager(dim=768, mode=self.bilora_mode), BiLoRA_Manager(dim=768, mode=self.bilora_mode)]
-
-    def apply_bilora(self, selected_index):
-        print("Applying BiLORA technique for current task: ", self._current_task, " at index: ", selected_index)
-        if self.apply_bilora_for in ["global", "both"]:
-            for i in range(len(self.global_bilora_managers)):
-                self.net.global_vitmodel.blocks[-i].attn = self.global_bilora_managers[-i].get_bilora_attn(task=self._current_task)
-                if len(self.global_bilora_managers[-i].weights) > 0:
-                    selected_weight = self.global_bilora_managers[-i].weights[selected_index]
-                    self.net.global_vitmodel.blocks[-i].attn.load_state_dict(selected_weight)
-        
-        if self.apply_bilora_for in ["local", "both"]:
-            for i in range(len(self.local_bilora_managers)):
-                self.net.local_vitmodel.blocks[-i].attn = self.local_bilora_managers[-i].get_bilora_attn(task=self._current_task)
-                if len(self.local_bilora_managers[-i].weights) > 0:
-                    selected_weight = self.local_bilora_managers[-i].weights[selected_index]
-                    self.net.local_vitmodel.blocks[-i].attn.load_state_dict(selected_weight)
+            for i in range(3):
+                self.net.local_vitmodel.blocks[9 + i].attn = BiLORA_MoE(dim=768)
 
 def kl_loss(student_feat, teacher_feat):
     student_feat = F.normalize(student_feat, p=2, dim=1)
