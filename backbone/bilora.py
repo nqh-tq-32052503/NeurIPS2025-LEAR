@@ -266,7 +266,7 @@ class BiLoRA_Manager(object):
         self.weights.append(saved_bilora_attn)
         
 class MoE(nn.Module):
-    def __init__(self, dim, num_experts, n_frq, n_tasks, topk, device="cuda", **kwargs):
+    def __init__(self, dim, num_experts, n_frq, n_tasks, topk, device="cuda", use_expert_weights=False, **kwargs):
         super().__init__()
         self.dim = dim
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -274,6 +274,7 @@ class MoE(nn.Module):
         self.n_tasks = n_tasks
         self.topk = topk
         self.num_experts = num_experts
+        self.use_expert_weights = use_expert_weights
         self.full_permutation = torch.randperm(dim * dim, generator=torch.Generator().manual_seed(42)).tolist()
         self.router = nn.Linear(dim, num_experts)
         self.coeff = nn.Parameter(torch.randn(num_experts, n_frq), requires_grad=True)
@@ -288,12 +289,15 @@ class MoE(nn.Module):
         device = self.coeff.device
         dim = self.dim
         all_selected_indices = self.list_indices[batch_expert_indices]
-        current_coeffs = self.coeff[batch_expert_indices] 
-        weighted_coeffs = current_coeffs * batch_expert_weights.unsqueeze(-1)
+        current_coeffs = self.coeff[batch_expert_indices]
+        if self.use_expert_weights:
+            weighted_coeffs = current_coeffs * batch_expert_weights.unsqueeze(-1)
+            flat_values = weighted_coeffs.view(-1)
+        else:
+            flat_values = current_coeffs.view(-1)
         aggregated_freq_mask = torch.zeros(B, dim, dim, device=device)
         batch_offsets = torch.arange(B, device=device).view(B, 1, 1) * (dim * dim)
         flat_indices = (all_selected_indices + batch_offsets).view(-1)
-        flat_values = weighted_coeffs.view(-1)
         aggregated_freq_mask.view(-1).index_put_(
             (flat_indices,), 
             flat_values, 
@@ -311,15 +315,16 @@ class MoE(nn.Module):
         return outputs
         
 class BiLORA_MoE(Attention_LoRA):
-    def __init__(self, dim, num_heads=8, qkv_bias=False, qk_scale=None, attn_drop=0., proj_drop=0., r=64, n_tasks=10, n_frq=3000, num_experts=20, topk=5):
+    def __init__(self, dim, num_heads=8, qkv_bias=False, qk_scale=None, attn_drop=0., proj_drop=0., r=64, n_tasks=10, n_frq=3000, num_experts=20, topk=5, use_expert_weights=False):
         super().__init__(dim, num_heads, qkv_bias, qk_scale, attn_drop, proj_drop, r, n_tasks)
         self.num_experts= num_experts
         self.n_tasks = n_tasks
         assert num_experts < (dim * dim) / n_frq, "Number of experts is too large"
         self.topk = topk
         self.n_frq = n_frq
-        self.moe_k = MoE(dim=dim, num_experts=num_experts, n_frq=n_frq, n_tasks=n_tasks, topk=topk, device=self.qkv.weight.device)
-        self.moe_v = MoE(dim=dim, num_experts=num_experts, n_frq=n_frq, n_tasks=n_tasks, topk=topk, device=self.qkv.weight.device)
+        self.use_expert_weights = use_expert_weights
+        self.moe_k = MoE(dim=dim, num_experts=num_experts, n_frq=n_frq, n_tasks=n_tasks, topk=topk, device=self.qkv.weight.device, use_expert_weights=self.use_expert_weights)
+        self.moe_v = MoE(dim=dim, num_experts=num_experts, n_frq=n_frq, n_tasks=n_tasks, topk=topk, device=self.qkv.weight.device, use_expert_weights=self.use_expert_weights)
     
     def to(self, device):
         self.moe_k.to(device)
