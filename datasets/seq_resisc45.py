@@ -88,7 +88,9 @@ class Resisc45(Dataset):
                 import shutil
                 current_dir = Path.cwd()
                 file_name = "./data/resisc45.tar.gz"
-                cmd = f"tar --xvzf {file_name} -C {self.root}"
+                if not os.path.exists(root):
+                    os.makedirs(root)
+                cmd = f"tar -xvzf {file_name} -C {root}"
                 os.system(cmd)
 
         if self.train:

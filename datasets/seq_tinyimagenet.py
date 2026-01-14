@@ -49,19 +49,19 @@ class TinyImagenet(Dataset):
                     shutil.move(found_path, self.root)
                 else:
                     raise FileNotFoundError(f'Folder {current_dir} not contains files')
-                assert os.path.exists(os.path.join(self.root, "processed/x_val_12.npy")), f"FileNotFound: found_path = {found_path}, root = {root}"
+                assert os.path.exists(os.path.join(self.root, "x_val_12.npy")), f"FileNotFound: found_path = {found_path}, root = {root}"
 
         self.data = []
         for num in range(20):
             self.data.append(np.load(smart_joint(
-                root, 'processed/x_%s_%02d.npy' %
+                root, 'x_%s_%02d.npy' %
                       ('train' if self.train else 'val', num + 1))))
         self.data = np.concatenate(np.array(self.data))
 
         self.targets = []
         for num in range(20):
             self.targets.append(np.load(smart_joint(
-                root, 'processed/y_%s_%02d.npy' %
+                root, 'y_%s_%02d.npy' %
                       ('train' if self.train else 'val', num + 1))))
         self.targets = np.concatenate(np.array(self.targets))
 

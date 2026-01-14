@@ -40,15 +40,11 @@ class MyCUB200(Dataset):
                 from pathlib import Path
                 import shutil
                 current_dir = Path.cwd()
-                file_names = ["train_data.npz", "test_data.npz"]
-                for file_name in file_names:
-                    found_path = None
-                    for path in current_dir.rglob(file_name):
-                        found_path = path
-                    if found_path is not None:
-                        shutil.move(found_path, f'{self.root}/{file_name}')
-                    else:
-                        raise FileNotFoundError(f'Folder {current_dir} not contains files')
+                file_names = ["./data/train_data.npz", "./data/test_data.npz"]
+                if not os.path.exists(root):
+                    os.makedirs(root)
+                shutil.move(file_names[0], root)
+                shutil.move(file_names[1], root)
 
         data_file = np.load(smart_joint(root, 'train_data.npz' if train else 'test_data.npz'), allow_pickle=True)
 
