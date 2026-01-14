@@ -39,11 +39,17 @@ class TinyImagenet(Dataset):
             if os.path.isdir(root) and len(os.listdir(root)) > 0:
                 print('Download not needed, files already on disk.')
             else:
-                from onedrivedownloader import download
-
-                print('Downloading dataset')
-                ln = "https://unimore365-my.sharepoint.com/:u:/g/personal/263133_unimore_it/EVKugslStrtNpyLGbgrhjaABqRHcE3PB_r2OEaV7Jy94oQ?e=9K29aD"
-                download(ln, filename=smart_joint(root, 'tiny-imagenet-processed.zip'), unzip=True, unzip_path=root, clean=True)
+                from pathlib import Path
+                import shutil
+                current_dir = Path.cwd()
+                file_name = "processed/"
+                for path in current_dir.rglob(file_name):
+                    found_path = path
+                if found_path is not None:
+                    shutil.move(found_path, self.root)
+                else:
+                    raise FileNotFoundError(f'Folder {current_dir} not contains files')
+                assert os.path.exists(os.path.join(self.root, "processed/x_val_12.npy")), f"FileNotFound: found_path = {found_path}, root = {root}"
 
         self.data = []
         for num in range(20):

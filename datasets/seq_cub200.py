@@ -37,10 +37,18 @@ class MyCUB200(Dataset):
             if os.path.isdir(root) and len(os.listdir(root)) > 0:
                 print('Download not needed, files already on disk.')
             else:
-                from onedrivedownloader import download
-                ln = '<iframe src="https://onedrive.live.com/embed?cid=D3924A2D106E0039&resid=D3924A2D106E0039%21110&authkey=AIEfi5nlRyY1yaE" width="98" height="120" frameborder="0" scrolling="no"></iframe>'
-                print('Downloading dataset')
-                download(ln, filename=smart_joint(root, 'cub_200_2011.zip'), unzip=True, unzip_path=root, clean=True)
+                from pathlib import Path
+                import shutil
+                current_dir = Path.cwd()
+                file_names = ["train_data.npz", "test_data.npz"]
+                for file_name in file_names:
+                    found_path = None
+                    for path in current_dir.rglob(file_name):
+                        found_path = path
+                    if found_path is not None:
+                        shutil.move(found_path, f'{self.root}/{file_name}')
+                    else:
+                        raise FileNotFoundError(f'Folder {current_dir} not contains files')
 
         data_file = np.load(smart_joint(root, 'train_data.npz' if train else 'test_data.npz'), allow_pickle=True)
 

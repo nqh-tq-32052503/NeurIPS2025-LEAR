@@ -38,26 +38,19 @@ class MyEuroSat(Dataset):
         self.target_transform = target_transform
         self.totensor = transforms.ToTensor()
 
-        if not os.path.exists(root + '/DONE'):
-            logging.info('Preparing dataset...')
-            r = requests.get('https://zenodo.org/records/7711810/files/EuroSAT_RGB.zip?download=1')
-            z = zipfile.ZipFile(io.BytesIO(r.content))
-            z.extractall(root)
-            os.system(f'mv {root}/EuroSAT_RGB/* {root}')
-            os.system(f'rmdir {root}/EuroSAT_RGB')
+        if not os.path.exists(root + '/eurosat'):
+            from pathlib import Path
+            import shutil
+            current_dir = Path.cwd()
+            file_name = "eurosat/"
+            for path in current_dir.rglob(file_name):
+                found_path = path
+            if found_path is not None:
+                shutil.move(found_path, self.root)
+            else:
+                raise FileNotFoundError(f'Folder {current_dir} not contains files')
 
-            # create DONE file
-            with open(self.root + '/DONE', 'w') as f:
-                f.write('')
-
-            # downlaod split file form https://drive.google.com/file/d/1Ip7yaCWFi0eaOFUGga0lUdVi_DDQth1o/
-            # from "Conditional Prompt Learning for Vision-Language Models", Kaiyang Zhou et al.
-            gdd.download_file_from_google_drive(file_id='1Ip7yaCWFi0eaOFUGga0lUdVi_DDQth1o',
-                                                dest_path=self.root + '/split.json')
-
-            logging.info('Done')
-
-        self.data_split = pd.DataFrame(json.load(open(self.root + '/split.json', 'r'))[split])
+        self.data_split = pd.DataFrame(json.load(open(self.root + '/eurosat/split.json', 'r'))[split])
         self.data = self.data_split[0].values
         self.targets = self.data_split[1].values
 

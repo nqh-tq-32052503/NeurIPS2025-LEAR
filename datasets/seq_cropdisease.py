@@ -73,11 +73,16 @@ class CropDisease(Dataset):
             if os.path.isdir(root) and len(os.listdir(root)) > 0:
                 print('Download not needed, files already on disk.')
             else:
-                from onedrivedownloader import download
-                ln = "https://unimore365-my.sharepoint.com/:u:/g/personal/215580_unimore_it/EZUaXKQUAVBPrhjHTUdflDEBNu0YiPWrdpAdDhnEU4nD2A?e=GPrCYF"
-                print('Downloading dataset')
-                parent_dir = os.path.dirname(root)
-                download(ln, filename=os.path.join(root, 'cropdisease.tar.gz'), unzip=True, unzip_path=parent_dir, clean=True)
+                from pathlib import Path
+                import shutil
+                current_dir = Path.cwd()
+                file_name = "cropdisease/"
+                for path in current_dir.rglob(file_name):
+                    found_path = path
+                if found_path is not None:
+                    shutil.move(found_path, self.root)
+                else:
+                    raise FileNotFoundError(f'Folder {current_dir} not contains files')
 
         filename = smart_joint(root, ('train' if train else 'test') + '.json')
         with open(filename) as f:

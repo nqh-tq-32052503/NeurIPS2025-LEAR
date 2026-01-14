@@ -84,12 +84,17 @@ class Resisc45(Dataset):
             if os.path.isdir(root) and len(os.listdir(root)) > 0:
                 print('Download not needed, files already on disk.')
             else:
-                # download from https://people.eecs.berkeley.edu/~hendrycks/imagenet-r.tar
-                print("Downloading resisc45 dataset...")
-                ln = 'https://unimore365-my.sharepoint.com/:u:/g/personal/215580_unimore_it/EbxMu5z5HbVIkG9qFCGbg7ABDRZvpBEA8uqVC-Em9HYVug?e=Cfc4Yc'
-                from onedrivedownloader import download
-                download(ln, filename=os.path.join(root, 'resisc45.tar.gz'), unzip=True, unzip_path=root, clean=True)
-                print("Done!")
+                from pathlib import Path
+                import shutil
+                current_dir = Path.cwd()
+                file_name = "resisc45.tar.gz"
+                for path in current_dir.rglob(file_name):
+                    found_path = path
+                if found_path is not None:
+                    shutil.move(found_path, self.root)
+                else:
+                    raise FileNotFoundError(f'Folder {current_dir} not contains files')
+                os.system('tar', '-xvzf', os.path.join(self.root, "resisc45.tar.gz"), "-C", self.root)
 
         if self.train:
             data_config = yaml.load(open(smart_joint(root, 'resisc45_train.yaml')), Loader=yaml.Loader)

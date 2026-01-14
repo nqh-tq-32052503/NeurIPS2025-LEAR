@@ -1,4 +1,4 @@
-import os
+import os, shutil
 import torchvision.transforms as transforms
 import torch.nn.functional as F
 from torch.utils.data import Dataset
@@ -6,6 +6,7 @@ import numpy as np
 import pickle
 from PIL import Image
 from typing import Tuple
+from pathlib import Path
 
 from datasets.utils import set_default_from_args
 from utils import smart_joint
@@ -45,11 +46,16 @@ class ChestX(Dataset):
 
         if not os.path.exists(f'{root}/train_images.pkl'):
             if download:
-                from onedrivedownloader import download
-
-                print('Downloading dataset')
-                ln = "https://unimore365-my.sharepoint.com/:u:/g/personal/215580_unimore_it/EfmFCiLaGlpFgtAuv0YLpeYBeR54I7YHK75bu_Ex78mADA?e=K8rHpZ"
-                download(ln, filename=smart_joint(root, 'chestx.zip'), unzip=True, unzip_path=root.rstrip('chestx'), clean=True)
+                current_dir = Path.cwd()
+                file_names = ["train_images.pkl", "test_images.pkl", "train_labels.pkl", "test_labels.pkl"]
+                for file_name in file_names:
+                    found_path = None
+                    for path in current_dir.rglob(file_name):
+                        found_path = path
+                    if found_path is not None:
+                        shutil.move(found_path, f'{self.root}/{file_name}')
+                    else:
+                        raise FileNotFoundError(f'Folder {current_dir} not contains files')
             else:
                 raise FileNotFoundError(f'File not found: {root}/train_images.pkl')
 
