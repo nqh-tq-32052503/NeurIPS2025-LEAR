@@ -77,7 +77,7 @@ class CropDisease(Dataset):
                 import shutil
                 current_dir = Path.cwd()
                 file_name = "./data/cropdisease.tar.gz"
-                cmd = f"tar -xvzf {file_name} -C ./data/"
+                cmd = f"tar -xzf {file_name} -C ./data/"
                 os.system(cmd)
 
         filename = smart_joint(root, ('train' if train else 'test') + '.json')

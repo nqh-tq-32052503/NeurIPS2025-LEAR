@@ -90,7 +90,7 @@ class Resisc45(Dataset):
                 file_name = "./data/resisc45.tar.gz"
                 if not os.path.exists(root):
                     os.makedirs(root)
-                cmd = f"tar -xvzf {file_name} -C {root}"
+                cmd = f"tar -xzf {file_name} -C {root}"
                 os.system(cmd)
 
         if self.train:
