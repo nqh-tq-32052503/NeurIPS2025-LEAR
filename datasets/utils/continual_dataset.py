@@ -626,10 +626,13 @@ def getAllLoaders(train_dataset: Dataset, test_dataset: Dataset,
     # Finalize data, apply unlabeled mask
     train_dataset, test_dataset = _prepare_data_loaders(train_dataset, test_dataset, setting)
     num_classes_per_task = setting.args.ncls_per_task
-    total_classes = list(range(setting.N_CLASSES))
-    available_classes = [item for item in total_classes if item not in setting.GENERATED_CLASSES]
-    target_classes = random.sample(available_classes, k=num_classes_per_task)
-    setting.GENERATED_CLASSES.extend(target_classes)
+    if num_classes_per_task > 0:
+        total_classes = list(range(setting.N_CLASSES))
+        available_classes = [item for item in total_classes if item not in setting.GENERATED_CLASSES]
+        target_classes = random.sample(available_classes, k=num_classes_per_task)
+        setting.GENERATED_CLASSES.extend(target_classes)
+    else:
+        target_classes = []
     # Create dataloaders
     train_loader = create_seeded_dataloader(setting.args, train_dataset, target_classes=target_classes,
                                             batch_size=setting.args.batch_size, shuffle=True, drop_last=setting.args.drop_last)

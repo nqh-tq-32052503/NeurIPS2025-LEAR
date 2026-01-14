@@ -87,14 +87,9 @@ class Resisc45(Dataset):
                 from pathlib import Path
                 import shutil
                 current_dir = Path.cwd()
-                file_name = "resisc45.tar.gz"
-                for path in current_dir.rglob(file_name):
-                    found_path = path
-                if found_path is not None:
-                    shutil.move(found_path, self.root)
-                else:
-                    raise FileNotFoundError(f'Folder {current_dir} not contains files')
-                os.system('tar', '-xvzf', os.path.join(self.root, "resisc45.tar.gz"), "-C", self.root)
+                file_name = "./data/resisc45.tar.gz"
+                cmd = f"tar --xvzf {file_name} -C {self.root}"
+                os.system(cmd)
 
         if self.train:
             data_config = yaml.load(open(smart_joint(root, 'resisc45_train.yaml')), Loader=yaml.Loader)

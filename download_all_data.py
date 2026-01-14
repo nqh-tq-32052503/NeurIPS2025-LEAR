@@ -4,7 +4,7 @@ def download_all_dataset(HF_TOKEN: str):
 
     from huggingface_hub import snapshot_download
 
-    hf_data = "./hf_data"
+    hf_data = "./data"
     if not os.path.exists(hf_data):
         os.makedirs(hf_data)
 

@@ -76,14 +76,9 @@ class CropDisease(Dataset):
                 from pathlib import Path
                 import shutil
                 current_dir = Path.cwd()
-                file_name = "cropdisease.tar.gz"
-                for path in current_dir.rglob(file_name):
-                    found_path = path
-                if found_path is not None:
-                    shutil.move(found_path, self.root)
-                else:
-                    raise FileNotFoundError(f'Folder {current_dir} not contains files')
-                os.system('tar', '-xvzf', os.path.join(self.root, "cropdisease.tar.gz"), "-C", self.root)
+                file_name = "./data/cropdisease.tar.gz"
+                cmd = f"tar --xvzf {file_name} -C {self.root}"
+                os.system(cmd)
 
         filename = smart_joint(root, ('train' if train else 'test') + '.json')
         with open(filename) as f:

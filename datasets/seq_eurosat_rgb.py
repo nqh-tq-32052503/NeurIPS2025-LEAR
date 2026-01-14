@@ -37,20 +37,7 @@ class MyEuroSat(Dataset):
         self.transform = transform
         self.target_transform = target_transform
         self.totensor = transforms.ToTensor()
-
-        if not os.path.exists(root + '/eurosat'):
-            from pathlib import Path
-            import shutil
-            current_dir = Path.cwd()
-            file_name = "eurosat/"
-            for path in current_dir.rglob(file_name):
-                found_path = path
-            if found_path is not None:
-                shutil.move(found_path, self.root)
-            else:
-                raise FileNotFoundError(f'Folder {current_dir} not contains files')
-
-        self.data_split = pd.DataFrame(json.load(open(self.root + '/eurosat/split.json', 'r'))[split])
+        self.data_split = pd.DataFrame(json.load(open(self.root + '/split.json', 'r'))[split])
         self.data = self.data_split[0].values
         self.targets = self.data_split[1].values
 
