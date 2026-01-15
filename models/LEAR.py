@@ -18,7 +18,7 @@ import random
 import copy
 from torch.distributions import MultivariateNormal
 from scipy.stats import multivariate_normal
-from backbone.bilora import BiLORA_MoE
+from backbone.bilora import BiLORA_MoE, BiLoRA_InverseMoE
 
 
 class LEAR(ContinualModel):
@@ -240,10 +240,10 @@ class LEAR(ContinualModel):
         print("[INFO] Initializing BiLoRA MoE")
         if self.apply_bilora_for in ["global", "both"]:
             for i in range(3):
-                self.net.global_vitmodel.blocks[9 + i].attn = BiLORA_MoE(dim=768)
+                self.net.global_vitmodel.blocks[9 + i].attn = BiLoRA_InverseMoE(dim=768)
         if self.apply_bilora_for in ["local", "both"]:
             for i in range(3):
-                self.net.local_vitmodel.blocks[9 + i].attn = BiLORA_MoE(dim=768)
+                self.net.local_vitmodel.blocks[9 + i].attn = BiLoRA_InverseMoE(dim=768)
 
 def kl_loss(student_feat, teacher_feat):
     student_feat = F.normalize(student_feat, p=2, dim=1)

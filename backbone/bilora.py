@@ -313,7 +313,34 @@ class MoE(nn.Module):
         batch_expert_weights = batch_expert_weights / batch_expert_weights.sum(dim=-1, keepdim=True)
         outputs = self.vectorized_forward(batch_expert_weights, batch_expert_indices, alpha=alpha)
         return outputs
+
+class InverseMoE(nn.Module):
+    def __init__(self, dim, num_experts=20, n_frq=3000, topk=5, device="cuda"):
+        super().__init__()
+        self.num_experts = num_experts
+        self.n_frq = n_frq
+        self.device = device
+        self.dim = dim
+        self.topk = topk
+        self.full_permutation = torch.randperm(dim * dim, generator=torch.Generator().manual_seed(42))
+        self.create_bilora_indices()
+        self.router = nn.Linear(dim, num_experts)
         
+    def create_bilora_indices(self):
+        list_indices = [torch.tensor(self.full_permutation[t * self.n_frq : (t + 1) * self.n_frq], device=self.device) for t in range(self.num_experts)]
+        self.list_indices = torch.stack(list_indices, dim=0)
+    
+    def forward(self, cls_token: torch.Tensor, **kwargs):
+        B = cls_token.size(0)
+        N = self.dim
+        router_logits = self.router(cls_token)
+        _, batch_expert_indices = torch.topk(F.softmax(router_logits, dim=-1), self.topk, dim=-1)
+        all_selected_indices = self.list_indices[batch_expert_indices]
+        indices_flat = all_selected_indices.view(B, -1).long()
+        binary_matrix_flat = torch.zeros(B, N * N, device=self.device)
+        binary_matrix_flat.scatter_(dim=1, index=indices_flat, value=1.0)
+        return binary_matrix_flat.view(B, N, N)
+
 class BiLORA_MoE(Attention_LoRA):
     def __init__(self, dim, num_heads=8, qkv_bias=False, qk_scale=None, attn_drop=0., proj_drop=0., r=64, n_tasks=10, n_frq=3000, num_experts=20, topk=5, use_expert_weights=False):
         super().__init__(dim, num_heads, qkv_bias, qk_scale, attn_drop, proj_drop, r, n_tasks)
@@ -347,4 +374,28 @@ class BiLORA_MoE(Attention_LoRA):
         x = self.proj(x)
         x = self.proj_drop(x)
         return x
+
+class BiLoRA_InverseMoE(Attention_LoRA):
+    def __init__(self, dim, num_heads=8, qkv_bias=False, qk_scale=None, attn_drop=0, proj_drop=0, r=64, n_tasks=10, num_experts=20):
+        super().__init__(dim, num_heads, qkv_bias, qk_scale, attn_drop, proj_drop, r, n_tasks)
         
+        self.moe_k = InverseMoE(dim=dim, num_experts=num_experts, n_frq=r, topk=5, device=self.qkv.weight.device)
+        self.moe_v = InverseMoE(dim=dim, num_experts=num_experts, n_frq=r, topk=5, device=self.qkv.weight.device)
+    
+    def forward(self, x, **kwargs):
+        B, N, C = x.shape
+        qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
+        q, k, v = qkv[0], qkv[1], qkv[2] 
+        weight_k = self.moe_k(x[:, 0, :])
+        weight_v = self.moe_v(x[:, 0, :])
+        k = k @ weight_k
+        v = v @ weight_v
+
+        attn = (q @ k.transpose(-2, -1)) * self.scale
+        attn = attn.softmax(dim=-1)
+        attn = self.attn_drop(attn) 
+
+        x = (attn @ v).transpose(1, 2).reshape(B, N, C)
+        x = self.proj(x)
+        x = self.proj_drop(x)
+        return x
