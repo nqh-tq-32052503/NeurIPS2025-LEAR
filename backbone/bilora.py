@@ -388,8 +388,8 @@ class BiLoRA_InverseMoE(Attention_LoRA):
         q, k, v = qkv[0], qkv[1], qkv[2] 
         weight_k = self.moe_k(x[:, 0, :])
         weight_v = self.moe_v(x[:, 0, :])
-        k = k @ weight_k
-        v = v @ weight_v
+        k = k + torch.bmm(x, weight_k).reshape(B, N, self.num_heads, C // self.num_heads).permute(0, 2, 1, 3)
+        v = v + torch.bmm(x, weight_v).reshape(B, N, self.num_heads, C // self.num_heads).permute(0, 2, 1, 3)
 
         attn = (q @ k.transpose(-2, -1)) * self.scale
         attn = attn.softmax(dim=-1)
