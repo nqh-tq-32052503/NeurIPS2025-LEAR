@@ -319,7 +319,7 @@ class InverseMoE(nn.Module):
         super().__init__()
         self.num_experts = num_experts
         self.n_frq = n_frq
-        self.device = device
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.dim = dim
         self.topk = topk
         self.full_permutation = torch.randperm(dim * dim, generator=torch.Generator().manual_seed(42))
