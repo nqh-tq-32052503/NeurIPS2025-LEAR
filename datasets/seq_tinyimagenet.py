@@ -48,14 +48,14 @@ class TinyImagenet(Dataset):
         self.data = []
         for num in range(20):
             self.data.append(np.load(smart_joint(
-                root, 'processed/x_%s_%02d.npy' %
+                root, 'x_%s_%02d.npy' %
                       ('train' if self.train else 'val', num + 1))))
         self.data = np.concatenate(np.array(self.data))
 
         self.targets = []
         for num in range(20):
             self.targets.append(np.load(smart_joint(
-                root, 'processed/y_%s_%02d.npy' %
+                root, 'y_%s_%02d.npy' %
                       ('train' if self.train else 'val', num + 1))))
         self.targets = np.concatenate(np.array(self.targets))
 
