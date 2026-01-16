@@ -203,6 +203,7 @@ def train_single_epoch(model: ContinualModel,
             data = next(train_iter)
         except StopIteration:
             break
+        
         # if debug:
         #     if i == 50:
         #         break
@@ -274,8 +275,8 @@ def train(model: ContinualModel, datasets: List[ContinualDataset],
 
     if not args.disable_log:
         logger = Logger(args, datasets[0].SETTING, datasets[0].NAME, model.NAME)
-
-    model.net.to(model.device)
+    device = torch.device("cuda")
+    model.net.to(device)
     torch.cuda.empty_cache()
 
     with track_system_stats(logger) as system_tracker:
