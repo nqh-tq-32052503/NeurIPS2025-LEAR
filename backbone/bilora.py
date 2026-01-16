@@ -264,3 +264,107 @@ class BiLoRA_Manager(object):
     def save_bilora_attn(self, bilora_attn: Attention_LoRA):
         saved_bilora_attn = copy.deepcopy(bilora_attn)
         self.weights.append(saved_bilora_attn)
+
+class MoE(nn.Module):
+    def __init__(self, dim, num_experts, n_frq, n_tasks, topk, device="cuda", use_expert_weights=False, **kwargs):
+        super().__init__()
+        self.dim = dim
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.n_frq = n_frq
+        self.n_tasks = n_tasks
+        self.topk = topk
+        self.num_experts = num_experts
+        self.use_expert_weights = use_expert_weights
+        self.full_permutation = torch.randperm(dim * dim, generator=torch.Generator().manual_seed(42)).tolist()
+        self.router = nn.Linear(dim, num_experts)
+        self.coeff = nn.Parameter(torch.randn(num_experts, n_frq), requires_grad=True)
+        self.create_bilora_indices()
+        
+    def create_bilora_indices(self):
+        list_indices = [torch.tensor(self.full_permutation[t * self.n_frq : (t + 1) * self.n_frq], device=self.device) for t in range(self.num_experts)]
+        self.list_indices = torch.stack(list_indices, dim=0)
+
+    def vectorized_forward(self, batch_expert_weights, batch_expert_indices, alpha=300):
+        B, topk = batch_expert_indices.shape
+        device = self.coeff.device
+        dim = self.dim
+        all_selected_indices = self.list_indices[batch_expert_indices]
+        current_coeffs = self.coeff[batch_expert_indices]
+        if self.use_expert_weights:
+            weighted_coeffs = current_coeffs * batch_expert_weights.unsqueeze(-1)
+            flat_values = weighted_coeffs.view(-1)
+        else:
+            flat_values = current_coeffs.view(-1)
+        aggregated_freq_mask = torch.zeros(B, dim, dim, device=device)
+        batch_offsets = torch.arange(B, device=device).view(B, 1, 1) * (dim * dim)
+        flat_indices = (all_selected_indices + batch_offsets).view(-1)
+        aggregated_freq_mask.view(-1).index_put_(
+            (flat_indices,), 
+            flat_values, 
+            accumulate=True
+        )
+        final_output = torch.fft.ifft2(aggregated_freq_mask, dim=(-2, -1)).real * alpha
+        return final_output
+    
+    def forward(self, cls_token, **kwargs):
+        alpha = 300
+        router_logits = self.router(cls_token)
+        batch_expert_weights, batch_expert_indices = torch.topk(F.softmax(router_logits, dim=-1), self.topk, dim=-1)
+        batch_expert_weights = batch_expert_weights / batch_expert_weights.sum(dim=-1, keepdim=True)
+        outputs = self.vectorized_forward(batch_expert_weights, batch_expert_indices, alpha=alpha)
+        return outputs
+
+class BiLORA_MoE(Attention_LoRA):
+    def __init__(self, dim, num_heads=8, qkv_bias=False, qk_scale=None, attn_drop=0., proj_drop=0., r=64, n_tasks=10, n_frq=3000, num_experts=20, topk=5, use_expert_weights=False, use_dom_enc_vect=False):
+        super().__init__(dim, num_heads, qkv_bias, qk_scale, attn_drop, proj_drop, r, n_tasks)
+        self.num_experts= num_experts
+        self.n_tasks = n_tasks
+        assert num_experts < (dim * dim) / n_frq, "Number of experts is too large"
+        self.topk = topk
+        self.n_frq = n_frq
+        self.dim = dim
+        self.use_expert_weights = use_expert_weights
+        self.moe_k = MoE(dim=dim, num_experts=num_experts, n_frq=n_frq, n_tasks=n_tasks, topk=topk, device=self.qkv.weight.device, use_expert_weights=self.use_expert_weights)
+        self.moe_v = MoE(dim=dim, num_experts=num_experts, n_frq=n_frq, n_tasks=n_tasks, topk=topk, device=self.qkv.weight.device, use_expert_weights=self.use_expert_weights)
+        self.use_dom_enc_vect = use_dom_enc_vect
+        if use_dom_enc_vect:
+            self.dom_en_vector = nn.Parameter(torch.randn(1, dim), requires_grad=True).to(self.qkv.weight.device)
+            self.list_dom_en_vectors = []
+    
+    def to(self, device):
+        self.moe_k.to(device)
+        self.moe_v.to(device)
+    
+    def end_task(self):
+        if self.use_dom_enc_vect:
+            self.list_dom_en_vectors.append(self.dom_en_vector)
+            print("[INFO] Current list of domain-encoding-vectors: ", len(self.list_dom_en_vectors))
+            self.dom_en_vector = nn.Parameter(torch.randn(1, self.dim), requires_grad=True).to(self.qkv.weight.device)
+    
+    def evaluate(self, task_index: int):
+        self.dom_en_vector = self.list_dom_en_vectors[task_index]
+    
+    def forward_with_dom_vector(self, x: torch.Tensor, dom_vector: torch.Tensor):
+        B, N, C = x.shape
+        if self.use_dom_enc_vect:
+            cls_token_modified = x[:, 0:1, :] + dom_vector.view(1, 1, -1)
+            rest_of_x = x[:, 1, :]
+            x = torch.cat([cls_token_modified, rest_of_x], dim=1)
+        qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
+        q, k, v = qkv[0], qkv[1], qkv[2] 
+        weight_k = self.moe_k(x[:, 0, :])
+        weight_v = self.moe_v(x[:, 0, :])
+        k = k + torch.bmm(x, weight_k).reshape(B, N, self.num_heads, C // self.num_heads).permute(0, 2, 1, 3)
+        v = v + torch.bmm(x, weight_v).reshape(B, N, self.num_heads, C // self.num_heads).permute(0, 2, 1, 3)
+
+        attn = (q @ k.transpose(-2, -1)) * self.scale
+        attn = attn.softmax(dim=-1)
+        attn = self.attn_drop(attn) 
+
+        x = (attn @ v).transpose(1, 2).reshape(B, N, C)
+        x = self.proj(x)
+        x = self.proj_drop(x)
+        return x
+    
+    def forward(self, x: torch.Tensor, **kwargs):
+        return self.forward_with_dom_vector(x, dom_vector=self.dom_en_vector)

@@ -82,7 +82,8 @@ class LEAR(MammothBackbone):
     def CreateNewExper(self, idx, num_classes):
         new_fc_dim = self.fc_dim
         new_fc = nn.Linear(self.model_dim, new_fc_dim, device=self.device)
-        # new_fc.load_state_dict(self.fcArr[idx].state_dict())
+        if idx >= 0:
+            new_fc.load_state_dict(self.fcArr[idx].state_dict())
         # self.classifier.load_state_dict(self.classifierArr[idx].state_dict())
         # print('load expert ' + str(idx + 1) + ' parameters')
         self.fcArr.append(new_fc)

@@ -18,7 +18,7 @@ import random
 import copy
 from torch.distributions import MultivariateNormal
 from scipy.stats import multivariate_normal
-from backbone.bilora import BiLoRA_Manager
+from backbone.bilora import BiLORA_MoE
 
 
 class LEAR(ContinualModel):
@@ -44,140 +44,10 @@ class LEAR(ContinualModel):
             self.init_bilora()
 
     def end_task(self, dataset) -> None:
-        #calculate distribution
-        train_loader = dataset.train_loader
-        num_choose = 100
-        with torch.no_grad():
-            train_iter = iter(train_loader)
-
-            pbar = tqdm(train_iter, total=num_choose,
-                        desc=f"Calculate distribution for task {self.current_task + 1}",
-                        disable=False, mininterval=0.5)
-
-            fc_features_list = []
-
-            count = 0
-            while count < num_choose:
-                try:
-                    data = next(train_iter)
-                except StopIteration:
-                    break
-
-                x = data[0]
-                x = x.to(self.device)
-
-                processX = self.net.vitProcess(x)
-                if processX.size(1) == 1:
-                    processX = processX.expand(-1, 3, -1, -1)
-                features = self.net.local_vitmodel.patch_embed(processX)
-                cls_token = self.net.local_vitmodel.cls_token.expand(features.shape[0], -1, -1)
-                features = torch.cat((cls_token, features), dim=1)
-                features = features + self.net.local_vitmodel.pos_embed
-
-                # forward pass till -3
-                for block in self.net.local_vitmodel.blocks[:-3]:
-                    features = block(features)
-
-                features = self.net.Forever_freezed_blocks(features)
-
-                features = self.net.local_vitmodel.norm(features)
-
-                class_token = features[:, 0, :]
-
-                fc_features_list.append(self.net.fcArr[self.current_task](class_token))
-
-                count += 1
-                pbar.update()
-
-            pbar.close()
-            fc_features = torch.cat(fc_features_list, dim=0)  # [num*b,fc_size]
-            mu = torch.mean(fc_features, dim=0)
-            sigma = torch.cov(fc_features.T)
-            self.net.distributions.append(MultivariateNormal(mu, sigma))
-
-        #deal with grad and blocks
-        for fc in self.net.fcArr:
-            for param in fc.parameters():
-                param.requires_grad = False
-
-        for cls in self.net.classifierArr:
-            for param in cls.parameters():
-                param.requires_grad = False
-
-        self.net.Freezed_local_blocks = copy.deepcopy(torch.nn.Sequential(*list(self.net.local_vitmodel.blocks[-3:])))
-        self.net.Freezed_global_blocks = copy.deepcopy(torch.nn.Sequential(*list(self.net.global_vitmodel.blocks[-3:])))
-
-        for block in self.net.Freezed_local_blocks:
-            for param in block.parameters():
-                param.requires_grad = False
-
-        for block in self.net.Freezed_global_blocks:
-            for param in block.parameters():
-                param.requires_grad = False
+        self.net.global_vitmodel[9].end_task()
 
     def begin_task(self, dataset, threshold=0) -> None:
-        train_loader = dataset.train_loader
-        min_idx = 0
-        if self.current_task > 0:
-            num_choose = 50
-            with torch.no_grad():
-                train_iter = iter(train_loader)
-
-                pbar = tqdm(train_iter, total=num_choose,
-                            desc=f"Choose params for task {self.current_task + 1}",
-                            disable=False, mininterval=0.5)
-
-                count = 0
-                while count < num_choose:
-                    try:
-                        data = next(train_iter)
-                    except StopIteration:
-                        break
-
-                    x = data[0]
-                    x = x.to(self.device)
-
-                    processX = self.net.vitProcess(x)
-                    if processX.size(1) == 1:
-                        processX = processX.expand(-1, 3, -1, -1)
-                    features = self.net.local_vitmodel.patch_embed(processX)
-                    cls_token = self.net.local_vitmodel.cls_token.expand(features.shape[0], -1, -1)
-                    features = torch.cat((cls_token, features), dim=1)
-                    features = features + self.net.local_vitmodel.pos_embed
-
-                    # forward pass till -3
-                    for block in self.net.local_vitmodel.blocks[:-3]:
-                        features = block(features)
-
-                    features = self.net.Forever_freezed_blocks(features)
-
-                    features = self.net.local_vitmodel.norm(features)
-
-                    class_token = features[:, 0, :]
-                    distances = [0] * len(self.net.fcArr)
-                    for t, (fc, dist) in enumerate(zip(self.net.fcArr, self.net.distributions)):
-                        fc_feature = fc(class_token)
-                        delta = fc_feature - dist.mean
-                        inv_cov = torch.linalg.inv(dist.covariance_matrix)
-                        mahalanobis = torch.sqrt(delta @ inv_cov @ delta.T).diagonal()
-                        distances[t] += mahalanobis.mean()
-
-                    count += 1
-                    bar_log = {'distances': [round((x / count).item(), 2) for x in distances]}
-                    pbar.set_postfix(bar_log, refresh=False)
-                    pbar.update()
-                pbar.close()
-
-                min_idx = torch.argmin(torch.tensor(distances)).item()
-                self.net.CreateNewExper(min_idx, dataset.N_CLASSES)
-        
-         
-        if self.use_bilora:
-            if self.current_task == 0 and (self.args.skip_task_0 == 1):
-                pass 
-            else:
-                self.apply_bilora(min_idx)
-
+        self.net.CreateNewExper(-1, dataset.N_CLASSES)
         self.opt = self.get_optimizer()
 
     def myPrediction(self,x,k):
@@ -222,50 +92,39 @@ class LEAR(ContinualModel):
         if processX.size(1) == 1:
             processX = processX.expand(-1, 3, -1, -1)
 
-        features = self.net.local_vitmodel.patch_embed(processX)
-        cls_token = self.net.local_vitmodel.cls_token.expand(features.shape[0], -1, -1)
+        features = self.net.global_vitmodel.patch_embed(processX)
+        cls_token = self.net.global_vitmodel.cls_token.expand(features.shape[0], -1, -1)
         features = torch.cat((cls_token, features), dim=1)
-        features = features + self.net.local_vitmodel.pos_embed
+        features = features + self.net.global_vitmodel.pos_embed
 
         # forward pass till -3
-        for block in self.net.local_vitmodel.blocks[:-3]:
+        for block in self.net.global_vitmodel.blocks[:-3]:
             features = block(features)
 
-        features = self.net.Forever_freezed_blocks(features)
+        # features = self.net.Forever_freezed_blocks(features)
 
-        features = self.net.local_vitmodel.norm(features)
-
+        # features = self.net.local_vitmodel.norm(features)
+        f_norm = self.net.global_vitmodel.norm
         class_token = features[:, 0, :]
-        distances = [0] * len(self.net.fcArr)
-        for t, (fc, dist) in enumerate(zip(self.net.fcArr, self.net.distributions)):
-            fc_feature = fc(class_token)
-            delta = fc_feature - dist.mean
-            inv_cov = torch.linalg.inv(dist.covariance_matrix)
-            mahalanobis = torch.sqrt(delta @ inv_cov @ delta.T).diagonal()
-            distances[t] += mahalanobis.mean().item()
+        distances = []
+        for task in range(len(self.net.fcArr)):
+            t_features = features.clone()
+            self.net.global_vitmodel[9].attn.evaluate(task)
+            for block in self.net.global_vitmodel.blocks[-3:]:
+                t_features = block(t_features)
+            t_features = f_norm(t_features)
+            t_cls_token = t_features[:, 0, :]
+            distances.append(kl_loss(t_cls_token, class_token))
+        
         return distances
+            
 
     def init_bilora(self):
-        if self.apply_bilora_for in ["global", "both"]:
-            self.global_bilora_managers = [BiLoRA_Manager(dim=768, mode=self.bilora_mode), BiLoRA_Manager(dim=768, mode=self.bilora_mode), BiLoRA_Manager(dim=768, mode=self.bilora_mode)]
-        if self.apply_bilora_for in ["local", "both"]:
-            self.local_bilora_managers = [BiLoRA_Manager(dim=768, mode=self.bilora_mode), BiLoRA_Manager(dim=768, mode=self.bilora_mode), BiLoRA_Manager(dim=768, mode=self.bilora_mode)]
-
-    def apply_bilora(self, selected_index):
-        print("Applying BiLORA technique for current task: ", self._current_task, " at index: ", selected_index)
-        if self.apply_bilora_for in ["global", "both"]:
-            for i in range(len(self.global_bilora_managers)):
-                self.net.global_vitmodel.blocks[-i].attn = self.global_bilora_managers[-i].get_bilora_attn(task=self._current_task)
-                if len(self.global_bilora_managers[-i].weights) > 0:
-                    selected_weight = self.global_bilora_managers[-i].weights[selected_index]
-                    self.net.global_vitmodel.blocks[-i].attn.load_state_dict(selected_weight)
-        
-        if self.apply_bilora_for in ["local", "both"]:
-            for i in range(len(self.local_bilora_managers)):
-                self.net.local_vitmodel.blocks[-i].attn = self.local_bilora_managers[-i].get_bilora_attn(task=self._current_task)
-                if len(self.local_bilora_managers[-i].weights) > 0:
-                    selected_weight = self.local_bilora_managers[-i].weights[selected_index]
-                    self.net.local_vitmodel.blocks[-i].attn.load_state_dict(selected_weight)
+        for i in range(3):
+            self.net.local_vitmodel.blocks[9 + i].attn = BiLORA_MoE(dim=768, use_dom_enc_vect=False)
+        for i in range(2):
+            self.net.global_vitmodel.blocks[10 + i].attn = BiLORA_MoE(dim=768, use_dom_enc_vect=False)
+        self.net.global_vitmodel.blocks[9].attn = BiLORA_MoE(dim=768, use_dom_enc_vect=True)
 
 def kl_loss(student_feat, teacher_feat):
     student_feat = F.normalize(student_feat, p=2, dim=1)
