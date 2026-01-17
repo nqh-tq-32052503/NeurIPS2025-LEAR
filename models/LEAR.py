@@ -39,6 +39,27 @@ class LEAR(ContinualModel):
         self.init_bilora()
         self.init_indices()
 
+    def extract_distribution(self, processX, mode="global"):
+        if mode == "global":
+            features = self.net.global_vitmodel.patch_embed(processX)
+            cls_token = self.net.global_vitmodel.cls_token.expand(features.shape[0], -1, -1)
+            features = torch.cat((cls_token, features), dim=1)
+            features = features + self.net.global_vitmodel.pos_embed
+            for block in self.net.global_vitmodel.blocks:
+                features = block(features)
+            features = self.net.global_vitmodel.norm(features)
+            class_token = features[:, 0, :]
+            return class_token
+        else:
+            features = self.net.local_vitmodel.patch_embed(processX)
+            cls_token = self.net.local_vitmodel.cls_token.expand(features.shape[0], -1, -1)
+            features = torch.cat((cls_token, features), dim=1)
+            features = features + self.net.local_vitmodel.pos_embed
+            for block in self.net.local_vitmodel.blocks:
+                features = block(features)
+            features = self.net.local_vitmodel.norm(features)
+            class_token = features[:, 0, :]
+            return self.net.fcArr[self.current_task](class_token)
     def end_task(self, dataset) -> None:
         #calculate distribution
         train_loader = dataset.train_loader
@@ -65,22 +86,8 @@ class LEAR(ContinualModel):
                 processX = self.net.vitProcess(x)
                 if processX.size(1) == 1:
                     processX = processX.expand(-1, 3, -1, -1)
-                features = self.net.global_vitmodel.patch_embed(processX)
-                cls_token = self.net.global_vitmodel.cls_token.expand(features.shape[0], -1, -1)
-                features = torch.cat((cls_token, features), dim=1)
-                features = features + self.net.global_vitmodel.pos_embed
-
-                # forward pass till -3
-                for block in self.net.global_vitmodel.blocks:
-                    features = block(features)
-
-                # features = self.net.Forever_freezed_blocks(features)
-
-                features = self.net.global_vitmodel.norm(features)
-
-                class_token = features[:, 0, :]
-
-                fc_features_list.append(self.net.fcArr[self.current_task](class_token))
+                extracted_features = self.extract_distribution(processX, mode="global")
+                fc_features_list.append(extracted_features)
 
                 count += 1
                 pbar.update()
