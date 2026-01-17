@@ -65,18 +65,18 @@ class LEAR(ContinualModel):
                 processX = self.net.vitProcess(x)
                 if processX.size(1) == 1:
                     processX = processX.expand(-1, 3, -1, -1)
-                features = self.net.local_vitmodel.patch_embed(processX)
-                cls_token = self.net.local_vitmodel.cls_token.expand(features.shape[0], -1, -1)
+                features = self.net.global_vitmodel.patch_embed(processX)
+                cls_token = self.net.global_vitmodel.cls_token.expand(features.shape[0], -1, -1)
                 features = torch.cat((cls_token, features), dim=1)
-                features = features + self.net.local_vitmodel.pos_embed
+                features = features + self.net.global_vitmodel.pos_embed
 
                 # forward pass till -3
-                for block in self.net.local_vitmodel.blocks:
+                for block in self.net.global_vitmodel.blocks:
                     features = block(features)
 
                 # features = self.net.Forever_freezed_blocks(features)
 
-                features = self.net.local_vitmodel.norm(features)
+                features = self.net.global_vitmodel.norm(features)
 
                 class_token = features[:, 0, :]
 
@@ -89,8 +89,15 @@ class LEAR(ContinualModel):
             fc_features = torch.cat(fc_features_list, dim=0)  # [num*b,fc_size]
             mu = torch.mean(fc_features, dim=0)
             sigma = torch.cov(fc_features.T)
-            print(sigma.shape)
-            self.net.distributions.append(MultivariateNormal(mu, sigma))
+            try:
+                L = torch.linalg.cholesky(sigma)
+            except RuntimeError:
+                # Nếu ma trận vẫn chưa xác định dương, thêm jitter rồi thử lại
+                eps = 1e-5
+                sigma = sigma + eps * torch.eye(sigma.size(0), device=sigma.device)
+                L = torch.linalg.cholesky(sigma)
+            self.net.distributions.append(MultivariateNormal(mu, scale_tril=L))
+            # self.net.distributions.append(MultivariateNormal(mu, sigma))
 
         #deal with grad and blocks
         for fc in self.net.fcArr:
@@ -113,59 +120,6 @@ class LEAR(ContinualModel):
         #         param.requires_grad = False
 
     def begin_task(self, dataset, threshold=0) -> None:
-        train_loader = dataset.train_loader
-        # min_idx = 0
-        # if self.current_task > 0:
-        #     num_choose = 50
-        #     with torch.no_grad():
-        #         train_iter = iter(train_loader)
-
-        #         pbar = tqdm(train_iter, total=num_choose,
-        #                     desc=f"Choose params for task {self.current_task + 1}",
-        #                     disable=False, mininterval=0.5)
-
-        #         count = 0
-        #         while count < num_choose:
-        #             try:
-        #                 data = next(train_iter)
-        #             except StopIteration:
-        #                 break
-
-        #             x = data[0]
-        #             x = x.to(self.device)
-
-        #             processX = self.net.vitProcess(x)
-        #             if processX.size(1) == 1:
-        #                 processX = processX.expand(-1, 3, -1, -1)
-        #             features = self.net.local_vitmodel.patch_embed(processX)
-        #             cls_token = self.net.local_vitmodel.cls_token.expand(features.shape[0], -1, -1)
-        #             features = torch.cat((cls_token, features), dim=1)
-        #             features = features + self.net.local_vitmodel.pos_embed
-
-        #             # forward pass till -3
-        #             for block in self.net.local_vitmodel.blocks:
-        #                 features = block(features)
-
-        #             # features = self.net.Forever_freezed_blocks(features)
-
-        #             features = self.net.local_vitmodel.norm(features)
-
-        #             class_token = features[:, 0, :]
-        #             distances = [0] * len(self.net.fcArr)
-        #             for t, (fc, dist) in enumerate(zip(self.net.fcArr, self.net.distributions)):
-        #                 fc_feature = fc(class_token)
-        #                 delta = fc_feature - dist.mean
-        #                 inv_cov = torch.linalg.inv(dist.covariance_matrix)
-        #                 mahalanobis = torch.sqrt(delta @ inv_cov @ delta.T).diagonal()
-        #                 distances[t] += mahalanobis.mean()
-
-        #             count += 1
-        #             bar_log = {'distances': [round((x / count).item(), 2) for x in distances]}
-        #             pbar.set_postfix(bar_log, refresh=False)
-        #             pbar.update()
-        #         pbar.close()
-
-        #         min_idx = torch.argmin(torch.tensor(distances)).item()
         if self.current_task > 0:
             self.net.CreateNewExper(-1, dataset.N_CLASSES)
 
@@ -191,7 +145,7 @@ class LEAR(ContinualModel):
             # NOTE: Task tiếp theo
             outputs, Freezed_global_features, Freezed_local_features, global_features, local_features = self.net(inputs, return_features=True)
             loss_kd = kl_loss(local_features, Freezed_local_features)
-            loss_mi = l2_distance(global_features, Freezed_global_features) #Directly calculate the L2 distance between features is more efficient than calculate MI between prediction, and it's also effective
+            loss_mi = kl_loss(global_features, Freezed_global_features) #Directly calculate the L2 distance between features is more efficient than calculate MI between prediction, and it's also effective
             loss_hsic = -hsic(global_features, local_features)
             loss_ce = self.loss(outputs, labels)
             loss_tot = loss_ce + loss_kd + loss_hsic + loss_mi
