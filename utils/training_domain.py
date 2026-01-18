@@ -169,8 +169,6 @@ def train_single_epoch(model: ContinualModel,
             data = next(train_iter)
         except StopIteration:
             break
-        if i == 50:
-            break
         # if debug:
         #     if i == 50:
         #         break
