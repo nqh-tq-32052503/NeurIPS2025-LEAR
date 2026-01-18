@@ -170,7 +170,7 @@ def train_single_epoch(model: ContinualModel,
         except StopIteration:
             break
         if args.debug_tag == 1:
-            if i == 50:
+            if i == 5:
                 break
         # if args.debug_mode and i > model.get_debug_iters():
         #     break
