@@ -123,8 +123,8 @@ class SequentialCIFAR100(ContinualDataset):
         test_dataset = TCIFAR100(base_path() + 'CIFAR100', train=False,
                                 download=True, transform=test_transform)
         
-        train, test = getAllLoaders(train_dataset, test_dataset, self)
-        return train, test
+        output = getAllLoaders(train_dataset, test_dataset, self, return_num_classes=True)
+        return output
 
     @staticmethod
     def get_transform():

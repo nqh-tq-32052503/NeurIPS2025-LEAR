@@ -63,45 +63,6 @@ def evaluate(model: ContinualModel, datasets, test_loaders, last=False, return_l
 
     expert_index_list = []
 
-    if len(test_loaders) > 1:
-        pbar_choose = tqdm(test_loaders, total=total_len, desc='Choose expert for evaluate',
-                           disable=model.args.non_verbose,ncols=170)
-        for j, test_loader in enumerate(test_loaders):
-            test_iter = iter(test_loader)
-            #min_idx_list = []
-            count = 1
-            sum_distances = [0] * len(test_loaders)
-            num_choose = 50
-            while True:
-                try:
-                    data = next(test_iter)
-                except StopIteration:
-                    break
-
-                inputs, labels = data
-                inputs, labels = inputs.to(model.device), labels.to(model.device)
-
-                distances = model.cal_expert_dist(inputs)
-                sum_distances = [(x + y)/count for x, y in zip(sum_distances, distances)]
-
-                min_idx = torch.argmin(torch.tensor(sum_distances)).item()
-
-                bar_log = {f'task {j + 1}': min_idx + 1, 'distance': [round(x,2) for x in sum_distances]}
-
-                pbar_choose.set_postfix(bar_log, refresh=False)
-                #pbar_choose.set_description(f"choose expert for task {j + 1}", refresh=False)
-                pbar_choose.update(1)
-                count += 1
-                if count == num_choose:
-                    break
-
-            expert_index_list.append(int(min_idx+1))
-
-        pbar_choose.close()
-    else:
-        expert_index_list = [1]
-    print('choose experts for evaluate:', expert_index_list)
-
     pbar = tqdm(test_loaders, total=total_len, desc='Evaluating', disable=model.args.non_verbose,ncols=170)
     for k, test_loader in enumerate(test_loaders):
         if last and k < len(test_loaders) - 1:
@@ -115,17 +76,13 @@ def evaluate(model: ContinualModel, datasets, test_loaders, last=False, return_l
                 data = next(test_iter)
             except StopIteration:
                 break
-            if debug:
-                if i > 2:
-                    break
-            if model.args.debug_mode and i > model.get_debug_iters():
-                break
+
             inputs, labels = data[0], data[1]
             inputs, labels = inputs.to(model.device), labels.to(model.device)
             if 'class-il' not in model.COMPATIBILITY and 'general-continual' not in model.COMPATIBILITY:
                 outputs = model(inputs, k)
             else:
-                outputs = model.myPrediction(inputs, expert_index_list[k] - 1)
+                outputs = model.myPrediction(inputs, 0)
 
             _, pred = torch.max(outputs[:, :n_classes].data, 1)
             correct += torch.sum(pred == labels).item()
@@ -303,10 +260,10 @@ def train(model: ContinualModel, datasets: List[ContinualDataset],
 
             model.net.train()
             datasets[t].GENERATED_CLASSES = []
-            train_loader, test_loader = datasets[t].get_all_data_loaders()
+            train_loader, test_loader, num_target_classes = datasets[t].get_all_data_loaders()
 
             test_loaders.append(test_loader)
-
+            datasets[t].N_CLASSES = num_target_classes
             model.meta_begin_task(datasets[t])
 
             if not args.inference_only and args.n_epochs > 0:

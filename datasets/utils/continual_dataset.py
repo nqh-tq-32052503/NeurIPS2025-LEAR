@@ -548,7 +548,7 @@ def store_masked_loaders(train_dataset: Dataset, test_dataset: Dataset,
     return train_loader, test_loader
 
 def getAllLoaders(train_dataset: Dataset, test_dataset: Dataset,
-                         setting: ContinualDataset) -> Tuple[DataLoader, DataLoader]:
+                         setting: ContinualDataset, return_num_classes=False) -> Tuple[DataLoader, DataLoader]:
     """
     Divides the dataset into tasks.
 
@@ -637,8 +637,10 @@ def getAllLoaders(train_dataset: Dataset, test_dataset: Dataset,
                                            batch_size=setting.args.batch_size, shuffle=False)
     setting.test_loader = test_loader
     setting.train_loader = train_loader
-
-    return train_loader, test_loader
+    if return_num_classes:
+        return train_loader, test_loader, len(target_classes)
+    else:
+        return train_loader, test_loader
 
 def fix_class_names_order(class_names: List[str], args: Namespace) -> List[str]:
     """
