@@ -36,7 +36,9 @@ class LEAR(ContinualModel):
 
         self.train_loader_size = None
         self.iter = 0
-        self.init_bilora()
+        self.debug_tag = args.debug_tag
+        if args.use_bilora == 1:
+            self.init_bilora()
         # self.init_indices()
 
     def extract_distribution(self, processX):
@@ -66,7 +68,9 @@ class LEAR(ContinualModel):
                     data = next(train_iter)
                 except StopIteration:
                     break
-
+                if self.debug_tag == 1:
+                    if count == 5:
+                        break
                 x = data[0]
                 y = data[1]
                 x = x.to(self.device)
