@@ -224,6 +224,7 @@ def add_configuration_args(parser: ArgumentParser, args: Namespace) -> None:
     config_group.add_argument('--use_bilora', default=0, type=int, help="Whether to apply BiLoRA to model or not")
     config_group.add_argument('--apply_bilora_for', type=str, default="both", help="Whether to apply BiLORA for global backbone or local backbone or both of them")
     config_group.add_argument('--skip_task_0', default=0, type=int)
+    config_group.add_argument('--debug_tag', type=int, default=0, help="BiLORA debug mode")
     config_group.add_argument('--bilora_mode', type=str, default="separate", help="BiLORA mode: separate, aggregate")
 
 def add_initial_args(parser) -> ArgumentParser:

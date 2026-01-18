@@ -1,6 +1,6 @@
 {
-    "id": "tranminh1505/lear-bilora-experiments-cifar100-disease",
-    "title": "lear-bilora-experiments-cifar100-disease",
+    "id": "tranminh1505/lear-bilora-cosine-cifar100",
+    "title": "lear-bilora-cosine-cifar100",
     "code_file": "template.ipynb",
     "language": "python",
     "kernel_type": "notebook",
