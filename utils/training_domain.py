@@ -64,13 +64,18 @@ def evaluate(model: ContinualModel, datasets, test_loaders, last=False, return_l
     expert_index_list = []
 
     pbar = tqdm(test_loaders, total=total_len, desc='Evaluating', disable=model.args.non_verbose,ncols=170)
+    cummulative_n_classes = [0]
     for k, test_loader in enumerate(test_loaders):
         if last and k < len(test_loaders) - 1:
             continue
         correct, correct_mask_classes, total = 0.0, 0.0, 0.0
         test_iter = iter(test_loader)
         n_classes = datasets[k].N_CLASSES_PER_TASK * datasets[k].N_TASKS
+        start_cls = cummulative_n_classes[-1]
+        end_cls = start_cls + n_classes
+        print(f"[EVALUATE TASK {k}] start from: {start_cls} to {end_cls} with {n_classes} classes")
         i = 0
+        list_outputs = []
         while True:
             try:
                 data = next(test_iter)
@@ -83,8 +88,10 @@ def evaluate(model: ContinualModel, datasets, test_loaders, last=False, return_l
                 outputs = model(inputs, k)
             else:
                 outputs = model.myPrediction(inputs, 0)
-
-            _, pred = torch.max(outputs[:, :n_classes].data, 1)
+            list_outputs.append(outputs.detach().cpu())
+            _, pred = torch.max(outputs[:, start_cls: end_cls].data, 1)
+            # labels += sum(cummulative_n_classes)
+            # _, pred = torch.max(outputs.data, 1)
             correct += torch.sum(pred == labels).item()
             total += labels.shape[0]
             i += 1
@@ -96,6 +103,8 @@ def evaluate(model: ContinualModel, datasets, test_loaders, last=False, return_l
                     if 'class-il' in model.COMPATIBILITY or 'general-continual' in model.COMPATIBILITY else 0)
         # accs_mask_classes.append(correct_mask_classes / total * 100)
         accs_mask_classes.append(0)
+        torch.save(torch.concat(list_outputs, dim=0), f"task_{k}_outputs.pt")
+        cummulative_n_classes.append(n_classes)
     pbar.close()
 
     model.net.train(status)
@@ -160,7 +169,8 @@ def train_single_epoch(model: ContinualModel,
             data = next(train_iter)
         except StopIteration:
             break
-        
+        if i == 50:
+            break
         # if debug:
         #     if i == 50:
         #         break
@@ -260,10 +270,9 @@ def train(model: ContinualModel, datasets: List[ContinualDataset],
 
             model.net.train()
             datasets[t].GENERATED_CLASSES = []
-            train_loader, test_loader, num_target_classes = datasets[t].get_all_data_loaders()
+            train_loader, test_loader = datasets[t].get_all_data_loaders()
 
             test_loaders.append(test_loader)
-            datasets[t].N_CLASSES = num_target_classes
             model.meta_begin_task(datasets[t])
 
             if not args.inference_only and args.n_epochs > 0:
@@ -307,11 +316,17 @@ def train(model: ContinualModel, datasets: List[ContinualDataset],
 
             # logged_accs = eval_dataset.log(args, logger, accs, t, dataset.SETTING)
             log_accs(args, logger, accs, t, datasets[t].SETTING)
-
+            save_mammoth_checkpoint(t, end_task, args,
+                                        model,
+                                        results=[logger.dump()],
+                                        optimizer_st=model.opt.state_dict() if hasattr(model, 'opt') else None,
+                                        scheduler_st=scheduler.state_dict() if scheduler is not None else None)
 
 
         system_tracker.print_stats()
-
+        
+    
+    
     if not args.disable_log:
         logger.write(vars(args))
         if not args.nowand:

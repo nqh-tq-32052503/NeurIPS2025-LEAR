@@ -77,20 +77,24 @@ class LEAR(ContinualModel):
                     processX = processX.expand(-1, 3, -1, -1)
                 extracted_features = self.extract_distribution(processX)
                 self.task_distributions.index_add_(0, y, extracted_features)
-
+                self.task_bincounts += torch.bincount(y, minlength=dataset.N_CLASSES)
                 count += 1
                 pbar.update()
 
             pbar.close()
+            self.task_distributions = self.task_distributions/ self.task_bincounts[:, None]
             if self.current_task == 0:
                 self.net.distributions = self.task_distributions.clone()
+                
             else:
                 old_distributions = self.net.distributions.clone()
                 self.net.distributions = torch.concat((old_distributions, self.task_distributions), dim=0)
-
+            torch.save(self.net.distributions.detach().cpu(), f"checkpoints/task_{self.current_task}_distributions.pt")
+            
     def begin_task(self, dataset, threshold=0) -> None:
         self.opt = self.get_optimizer()
         self.task_distributions = torch.zeros((dataset.N_CLASSES, 768), dtype=torch.float32, device=self.device)
+        self.task_bincounts = torch.zeros(dataset.N_CLASSES, dtype=torch.long, device=self.device)
         print(f"[INFO] Starting task {self.current_task} with {dataset.N_CLASSES} classes.")
         
         

@@ -637,10 +637,7 @@ def getAllLoaders(train_dataset: Dataset, test_dataset: Dataset,
                                            batch_size=setting.args.batch_size, shuffle=False)
     setting.test_loader = test_loader
     setting.train_loader = train_loader
-    if return_num_classes:
-        return train_loader, test_loader, len(target_classes)
-    else:
-        return train_loader, test_loader
+    return train_loader, test_loader
 
 def fix_class_names_order(class_names: List[str], args: Namespace) -> List[str]:
     """

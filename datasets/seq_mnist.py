@@ -4,7 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from typing import Tuple
-
+from tqdm import tqdm
 import torch
 import torch.nn.functional as F
 import torchvision.transforms as transforms
@@ -27,6 +27,7 @@ class MyMNIST(MNIST):
         self.not_aug_transform = transforms.ToTensor()
         super(MyMNIST, self).__init__(root, train,
                                       transform, target_transform, download)
+        self.pil_data = [Image.fromarray(self.data[i].numpy(), mode='L') for i in tqdm(range(len(self.data)))]
 
     def __getitem__(self, index: int) -> Tuple[Image.Image, int, Image.Image]:
         """
@@ -38,11 +39,10 @@ class MyMNIST(MNIST):
         Returns:
             tuple: (image, target) where target is index of the target class.
         """
-        img, target = self.data[index], self.targets[index]
+        img, target = self.pil_data[index], self.targets[index]
 
         # doing this so that it is consistent with all other datasets
         # to return a PIL Image
-        img = Image.fromarray(img.numpy(), mode='L')
         original_img = self.not_aug_transform(img.copy())
 
         if self.transform is not None:
