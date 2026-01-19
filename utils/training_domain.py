@@ -89,9 +89,10 @@ def evaluate(model: ContinualModel, datasets, test_loaders, last=False, return_l
             else:
                 outputs = model.myPrediction(inputs, 0)
             list_outputs.append(outputs.detach().cpu())
-            _, pred = torch.max(outputs[:, start_cls: end_cls].data, 1)
-            # labels += sum(list_n_classes)
-            # _, pred = torch.max(outputs.data, 1)
+            # _, pred = torch.max(outputs[:, start_cls: end_cls].data, 1)
+            PREV_N_CLASSES = sum(list_n_classes)
+            labels += PREV_N_CLASSES
+            _, pred = torch.max(outputs.data, 1)
             correct += torch.sum(pred == labels).item()
             total += labels.shape[0]
             i += 1
