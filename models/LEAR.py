@@ -46,7 +46,7 @@ class LEAR(ContinualModel):
     def end_task(self, dataset) -> None:
         #calculate distribution
         train_loader = dataset.train_loader
-        num_choose = 100
+        num_choose = len(train_loader)
         with torch.no_grad():
             train_iter = iter(train_loader)
 
@@ -119,7 +119,7 @@ class LEAR(ContinualModel):
         train_loader = dataset.train_loader
         min_idx = 0
         if self.current_task > 0:
-            num_choose = 50
+            num_choose = len(train_loader)
             with torch.no_grad():
                 train_iter = iter(train_loader)
 
