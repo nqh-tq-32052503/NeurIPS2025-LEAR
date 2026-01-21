@@ -135,8 +135,8 @@ class LEAR(ContinualModel):
     
     def init_bilora(self):
         print("[INFO] Initializing BiLoRA MoE")
-        for i in range(3):
-            self.net.local_vitmodel.blocks[9 + i].attn = BiLORA_MoE(dim=768)
+        for i in range(12):
+            self.net.local_vitmodel.blocks[i].attn = BiLORA_MoE(dim=768, num_experts=8, topk=3)
             
 def kl_loss(student_feat, teacher_feat):
     student_feat = F.normalize(student_feat, p=2, dim=1)
