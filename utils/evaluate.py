@@ -71,8 +71,8 @@ def evaluate(model: 'ContinualModel', dataset: 'ContinualDataset', last=False, r
                 break
             # if i > 2:
             #     break
-            if model.args.debug_mode and i > model.get_debug_iters():
-                break
+            # if model.args.debug_mode and i > model.get_debug_iters():
+            #     break
             inputs, labels = data[0], data[1]
             inputs, labels = inputs.to(model.device), labels.to(model.device)
             if 'class-il' not in model.COMPATIBILITY and 'general-continual' not in model.COMPATIBILITY:

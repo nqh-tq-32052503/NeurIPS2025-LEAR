@@ -191,15 +191,18 @@ class LEAR(ContinualModel):
             loss_mi = l2_distance(global_features, Freezed_global_features) #Directly calculate the L2 distance between features is more efficient than calculate MI between prediction, and it's also effective
             loss_hsic = -hsic(global_features, local_features)
             loss_ce = self.loss(outputs, labels)
-            loss_tot = loss_ce + loss_kd + loss_hsic + loss_mi
-            loss_vis = [loss_ce.item(), loss_kd.item(), loss_hsic.item(), loss_mi.item()]
+            p_loss = self.cal_router_penalty_loss()
+            loss_tot = loss_ce + loss_kd + loss_hsic + loss_mi + p_loss
+            loss_vis = [loss_ce.item(), loss_kd.item(), loss_hsic.item(), p_loss.item()]
         else:
             # NOTE: Task đầu tiên
             outputs, global_features, local_features = self.net(inputs)
             loss_hsic = -hsic(global_features, local_features)
             loss_ce = self.loss(outputs, labels)
-            loss_tot = loss_ce + loss_hsic
-            loss_vis = [loss_ce.item(), loss_hsic.item()]
+            p_loss = self.cal_router_penalty_loss()
+            loss_tot = loss_ce + loss_hsic + p_loss
+            loss_vis = [loss_ce.item(), p_loss.item()]
+
 
         loss_tot.backward()
 
@@ -240,10 +243,28 @@ class LEAR(ContinualModel):
         print("[INFO] Initializing BiLoRA MoE")
         if self.apply_bilora_for in ["global", "both"]:
             for i in range(3):
-                self.net.global_vitmodel.blocks[9 + i].attn = BiLoRA_InverseMoE(dim=768)
+                self.net.global_vitmodel.blocks[9 + i].attn = BiLORA_MoE(dim=768)
         if self.apply_bilora_for in ["local", "both"]:
             for i in range(3):
-                self.net.local_vitmodel.blocks[9 + i].attn = BiLoRA_InverseMoE(dim=768)
+                self.net.local_vitmodel.blocks[9 + i].attn = BiLORA_MoE(dim=768)
+
+    def cal_router_penalty_loss(self):
+        router_penalty = 0
+        for i in range(3):
+            k_loss = penalty_loss(self.net.global_vitmodel.blocks[9 + i].attn.moe_k.expert_weights)
+            v_loss = penalty_loss(self.net.global_vitmodel.blocks[9 + i].attn.moe_v.expert_weights)
+            router_penalty += k_loss + v_loss
+        for i in range(3):
+            k_loss = penalty_loss(self.net.local_vitmodel.blocks[9 + i].attn.moe_k.expert_weights)
+            v_loss = penalty_loss(self.net.local_vitmodel.blocks[9 + i].attn.moe_v.expert_weights)
+            router_penalty += k_loss + v_loss
+        return router_penalty
+
+def penalty_loss(X, threshold=0.7):
+    # Penalty loss: Chỉ phạt khi X < threshold
+    # print("X (expert weights):", torch.mean(X))
+    penalty = torch.mean(torch.clamp(threshold - X, min=0))
+    return penalty
 
 def kl_loss(student_feat, teacher_feat):
     student_feat = F.normalize(student_feat, p=2, dim=1)

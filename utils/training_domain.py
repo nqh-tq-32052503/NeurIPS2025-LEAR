@@ -71,7 +71,7 @@ def evaluate(model: ContinualModel, datasets, test_loaders, last=False, return_l
             #min_idx_list = []
             count = 1
             sum_distances = [0] * len(test_loaders)
-            num_choose = 50
+            num_choose = len(test_loader)
             while True:
                 try:
                     data = next(test_iter)
@@ -92,8 +92,7 @@ def evaluate(model: ContinualModel, datasets, test_loaders, last=False, return_l
                 #pbar_choose.set_description(f"choose expert for task {j + 1}", refresh=False)
                 pbar_choose.update(1)
                 count += 1
-                if count == num_choose:
-                    break
+                
 
             expert_index_list.append(int(min_idx+1))
 
@@ -115,11 +114,7 @@ def evaluate(model: ContinualModel, datasets, test_loaders, last=False, return_l
                 data = next(test_iter)
             except StopIteration:
                 break
-            if debug:
-                if i > 2:
-                    break
-            if model.args.debug_mode and i > model.get_debug_iters():
-                break
+            
             inputs, labels = data[0], data[1]
             inputs, labels = inputs.to(model.device), labels.to(model.device)
             if 'class-il' not in model.COMPATIBILITY and 'general-continual' not in model.COMPATIBILITY:
@@ -349,7 +344,16 @@ def train(model: ContinualModel, datasets: List[ContinualDataset],
 
             # logged_accs = eval_dataset.log(args, logger, accs, t, dataset.SETTING)
             log_accs(args, logger, accs, t, datasets[t].SETTING)
-
+            try:
+                save_mammoth_checkpoint(t, end_task, args,
+                                            model,
+                                            results=[logger.dump()],
+                                            optimizer_st=model.opt.state_dict() if hasattr(model, 'opt') else None,
+                                            scheduler_st=scheduler.state_dict() if scheduler is not None else None)
+                print("[INFO] Save checkpoint at task: ", t)
+            except Exception as e:
+                print("[ERROR] Error while saving checkpoint...", e)
+                pass
 
 
         system_tracker.print_stats()
