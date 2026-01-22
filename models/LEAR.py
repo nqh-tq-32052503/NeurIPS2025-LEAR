@@ -116,8 +116,10 @@ class LEAR(ContinualModel):
         label_matrix = (labels.unsqueeze(0) == labels.unsqueeze(1))
         label_matrix = label_matrix.float()
         input_sim_matrix = self.net(inputs)
-        loss_tot = l2_distance(input_sim_matrix, label_matrix)
-        loss_vis = loss_tot.item()
+        loss_sim = l2_distance(input_sim_matrix, label_matrix)
+        p_loss = self.cal_router_penalty_loss()
+        loss_vis = [loss_sim.item(), p_loss.item()]
+        loss_tot = loss_sim + p_loss
         loss_tot.backward()
         self.opt.step()
         return loss_vis
@@ -136,8 +138,22 @@ class LEAR(ContinualModel):
     def init_bilora(self):
         print("[INFO] Initializing BiLoRA MoE")
         for i in range(12):
-            self.net.local_vitmodel.blocks[i].attn = BiLORA_MoE(dim=768, num_experts=8, topk=3)
+            self.net.local_vitmodel.blocks[i].attn = BiLORA_MoE(dim=768, num_experts=10, topk=3)
             
+    def cal_router_penalty_loss(self):
+        router_penalty = 0
+        for i in range(3):
+            k_loss = penalty_loss(self.net.local_vitmodel.blocks[9 + i].attn.moe_k.expert_weights)
+            v_loss = penalty_loss(self.net.local_vitmodel.blocks[9 + i].attn.moe_v.expert_weights)
+            router_penalty += k_loss + v_loss
+        return router_penalty
+
+def penalty_loss(X, threshold=0.7):
+    # Penalty loss: Chỉ phạt khi X < threshold
+    # print("X (expert weights):", torch.mean(X))
+    penalty = torch.mean(torch.clamp(threshold - X, min=0))
+    return penalty
+
 def kl_loss(student_feat, teacher_feat):
     student_feat = F.normalize(student_feat, p=2, dim=1)
     teacher_feat = F.normalize(teacher_feat, p=2, dim=1)

@@ -363,6 +363,7 @@ class MoE(nn.Module):
         self.full_permutation = torch.randperm(dim * dim, generator=torch.Generator().manual_seed(42)).tolist()
         self.router = nn.Linear(dim, num_experts)
         self.coeff = nn.Parameter(torch.randn(num_experts, n_frq), requires_grad=True)
+        self.expert_weights = torch.zeros((self.topk, ), device=self.device, dtype=torch.float32)
         self.create_bilora_indices()
         
     def create_bilora_indices(self):
@@ -395,12 +396,13 @@ class MoE(nn.Module):
         alpha = 300
         router_logits = self.router(cls_token)
         batch_expert_weights, batch_expert_indices = torch.topk(F.softmax(router_logits, dim=-1), self.topk, dim=-1)
-        batch_expert_weights = batch_expert_weights / batch_expert_weights.sum(dim=-1, keepdim=True)
+        # batch_expert_weights = batch_expert_weights / batch_expert_weights.sum(dim=-1, keepdim=True)
+        self.expert_weights = batch_expert_weights.sum(dim=-1)
         outputs = self.vectorized_forward(batch_expert_weights, batch_expert_indices, alpha=alpha)
         return outputs
         
 class BiLORA_MoE(Attention_LoRA):
-    def __init__(self, dim, num_heads=8, qkv_bias=False, qk_scale=None, attn_drop=0., proj_drop=0., r=64, n_tasks=10, n_frq=3000, num_experts=16, topk=5, use_expert_weights=False):
+    def __init__(self, dim, num_heads=8, qkv_bias=False, qk_scale=None, attn_drop=0., proj_drop=0., r=64, n_tasks=10, n_frq=3000, num_experts=10, topk=3, use_expert_weights=False):
         super().__init__(dim, num_heads, qkv_bias, qk_scale, attn_drop, proj_drop, r, n_tasks)
         self.num_experts= num_experts
         self.n_tasks = n_tasks
