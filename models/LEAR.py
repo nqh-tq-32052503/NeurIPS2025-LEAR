@@ -103,7 +103,7 @@ class LEAR(ContinualModel):
         for cls in self.net.classifierArr:
             for param in cls.parameters():
                 param.requires_grad = False
-
+        self.reset_router_penalty()
         self.net.Freezed_local_blocks = copy.deepcopy(torch.nn.Sequential(*list(self.net.local_vitmodel.blocks[-3:])))
         self.net.Freezed_global_blocks = copy.deepcopy(torch.nn.Sequential(*list(self.net.global_vitmodel.blocks[-3:])))
 
@@ -239,6 +239,15 @@ class LEAR(ContinualModel):
             distances[t] += mahalanobis.mean().item()
         return distances
 
+    def reset_router_penalty(self):
+        zero_tensor = torch.zeros(768, device=self.device)
+        for i in range(3):
+            self.net.global_vitmodel.blocks[9 + i].attn.moe_v.expert_weights = zero_tensor
+            self.net.global_vitmodel.blocks[9 + i].attn.moe_k.expert_weights = zero_tensor
+            self.net.local_vitmodel.blocks[9 + i].attn.moe_v.expert_weights = zero_tensor
+            self.net.local_vitmodel.blocks[9 + i].attn.moe_k.expert_weights = zero_tensor
+        print("[INFO] Reset router penalty")
+    
     def init_bilora(self):
         print("[INFO] Initializing BiLoRA MoE")
         if self.apply_bilora_for in ["global", "both"]:
