@@ -9,8 +9,6 @@ class TaskExpertTracing(nn.Module):
         self.classifier = classifier
     
     def forward(self, processX):
-        if processX.size(1) == 1:
-            processX = processX.expand(-1, 3, -1, -1)
         local_features = self.local_vitmodel.patch_embed(processX)
         local_cls_token = self.local_vitmodel.cls_token.expand(local_features.shape[0], -1, -1)
         local_features = torch.cat((local_cls_token, local_features), dim=1)

@@ -168,6 +168,8 @@ class LEAR(MammothBackbone):
     
     def inference(self, x):
         processX = self.vitProcess(x)
+        if processX.size(1) == 1:
+            processX = processX.expand(-1, 3, -1, -1)
         out = self.task_expert(processX)
         return out
     
