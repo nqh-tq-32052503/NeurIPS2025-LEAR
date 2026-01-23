@@ -11,8 +11,7 @@ origin_params = {
     "num_workers" : 8,
     "backbone" : "lear",
     "transform_type" : "weak",
-    "use_bilora" : 1,
-    "debug_tag" : 1
+    "use_bilora" : 1
 }
 
 list1 = ["both"]
