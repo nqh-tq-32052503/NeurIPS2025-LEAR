@@ -186,6 +186,8 @@ class LEAR(ContinualModel):
         task_expert.eval().to(self.device)
         example_input = torch.rand(7, 3, 224, 224).to(self.device)
         traced_model = torch.jit.trace(task_expert, example_input)
+        if not os.path.exists("./factory"):
+            os.mkdir("./factory")
         traced_model.save(f"./factory/task_{index}.pt")
         print("[INFO] Save current task checkpoints")
     
