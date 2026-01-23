@@ -323,6 +323,8 @@ def train(model: ContinualModel, datasets: List[ContinualDataset],
                     logging.info(f"Task {t + 1}")  # at least print the task number
 
                 while True:
+                    if t == 0 and epoch == 2:
+                        break
                     model.begin_epoch(epoch, datasets[t])
 
                     train_pbar.set_description(f"Task {t + 1} - Epoch {epoch + 1}")
@@ -337,6 +339,7 @@ def train(model: ContinualModel, datasets: List[ContinualDataset],
                     epoch += 1
                     if args.fitting_mode == 'epochs' and epoch >= model.args.n_epochs:
                         break
+                    
 
                 train_pbar.close()
 
