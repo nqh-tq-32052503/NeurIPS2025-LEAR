@@ -108,6 +108,8 @@ def evaluate(model: ContinualModel, datasets, test_loaders, last=False, return_l
         correct, correct_mask_classes, total = 0.0, 0.0, 0.0
         test_iter = iter(test_loader)
         n_classes = datasets[k].N_CLASSES_PER_TASK * datasets[k].N_TASKS
+        expert_index = expert_index_list[k] - 1
+        model.net.load_expert(expert_index)
         i = 0
         while True:
             try:
@@ -344,16 +346,16 @@ def train(model: ContinualModel, datasets: List[ContinualDataset],
 
             # logged_accs = eval_dataset.log(args, logger, accs, t, dataset.SETTING)
             log_accs(args, logger, accs, t, datasets[t].SETTING)
-            try:
-                save_mammoth_checkpoint(t, end_task, args,
-                                            model,
-                                            results=[logger.dump()],
-                                            optimizer_st=model.opt.state_dict() if hasattr(model, 'opt') else None,
-                                            scheduler_st=scheduler.state_dict() if scheduler is not None else None)
-                print("[INFO] Save checkpoint at task: ", t)
-            except Exception as e:
-                print("[ERROR] Error while saving checkpoint...", e)
-                pass
+            # try:
+            #     save_mammoth_checkpoint(t, end_task, args,
+            #                                 model,
+            #                                 results=[logger.dump()],
+            #                                 optimizer_st=model.opt.state_dict() if hasattr(model, 'opt') else None,
+            #                                 scheduler_st=scheduler.state_dict() if scheduler is not None else None)
+            #     print("[INFO] Save checkpoint at task: ", t)
+            # except Exception as e:
+            #     print("[ERROR] Error while saving checkpoint...", e)
+            #     pass
 
 
         system_tracker.print_stats()

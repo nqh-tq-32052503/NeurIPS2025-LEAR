@@ -78,7 +78,7 @@ class LEAR(MammothBackbone):
         for block in self.Forever_freezed_blocks:
             for param in block.parameters():
                 param.requires_grad = False
-
+        self.task_expert = None
     def CreateNewExper(self, idx, num_classes):
         new_fc_dim = self.fc_dim
         new_fc = nn.Linear(self.model_dim, new_fc_dim, device=self.device)
@@ -160,13 +160,28 @@ class LEAR(MammothBackbone):
         else:
             return global_features, local_features
 
-    def myprediction(self, x, index):
+    def load_expert(self, index):
+        task_expert = torch.jit.load(f"./factory/task_{index}.pt")
+        task_expert.eval().to(self.device)
+        self.task_expert = task_expert
+        print("[INFO] Load expert successfully from task ", index)
+    
+    def inference(self, x):
+        processX = self.vitProcess(x)
+        out = self.task_expert(processX)
+        return out
+    
+    def myprediction(self, x, index, apply_task=False):
         with torch.no_grad():
-            global_features, local_features = self.forward_fusion(x)
-            fcfeatures = self.fcArr[index](local_features)
-            final_features = torch.cat((global_features, fcfeatures), dim=1)
-            out = self.classifierArr[index](final_features)
-            return out
+            if not apply_task:
+                global_features, local_features = self.forward_fusion(x)
+                fcfeatures = self.fcArr[index](local_features)
+                final_features = torch.cat((global_features, fcfeatures), dim=1)
+                out = self.classifierArr[index](final_features)
+                return out
+            else:
+                out = self.inference(x)
+                return out
 
 
 @register_backbone("lear")

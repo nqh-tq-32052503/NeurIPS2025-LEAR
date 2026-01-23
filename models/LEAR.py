@@ -19,6 +19,7 @@ import copy
 from torch.distributions import MultivariateNormal
 from scipy.stats import multivariate_normal
 from backbone.bilora import BiLORA_MoE, BiLoRA_InverseMoE
+from models.tracing import TaskExpertTracing
 
 
 class LEAR(ContinualModel):
@@ -115,6 +116,8 @@ class LEAR(ContinualModel):
             for param in block.parameters():
                 param.requires_grad = False
 
+        self.save_current_task()
+        
     def begin_task(self, dataset, threshold=0) -> None:
         train_loader = dataset.train_loader
         min_idx = 0
@@ -173,10 +176,24 @@ class LEAR(ContinualModel):
 
         self.opt = self.get_optimizer()
 
+    def save_current_task(self):
+        index = self.current_task
+        global_vitmodel = copy.deepcopy(self.net.global_vitmodel)
+        local_vitmodel = copy.deepcopy(self.net.local_vitmodel)
+        fc = copy.deepcopy(self.net.fcArr[self.current_task])
+        classifier = copy.deepcopy(self.net.classifierArr[self.current_task])
+        task_expert = TaskExpertTracing(global_vitmodel, local_vitmodel, fc, classifier)
+        task_expert.eval().to(self.device)
+        example_input = torch.rand(7, 3, 224, 224).to(self.device)
+        traced_model = torch.jit.trace(task_expert, example_input)
+        traced_model.save(f"./factory/task_{index}.pt")
+        print("[INFO] Save current task checkpoints")
+    
     def myPrediction(self,x,k):
         with torch.no_grad():
             #Perform the prediction according to the seloeced expert
-            out = self.net.myprediction(x,k)
+            # out = self.net.myprediction(x,k)
+            out = self.net.myprediction(x,k, apply_task=True)
         return out
 
     def observe(self, inputs, labels, not_aug_inputs, epoch=None):
