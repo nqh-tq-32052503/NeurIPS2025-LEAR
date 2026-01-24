@@ -193,7 +193,7 @@ def train_single_epoch(model: ContinualModel,
 
     i = 0
     previous_time = time()
-
+    epoch_loss_ce = []
 
     while True:
         try:
@@ -239,7 +239,7 @@ def train_single_epoch(model: ContinualModel,
             bar_log = {'loss_ce': loss[0], 'loss_nor': loss[1], 'lr': model.opt.param_groups[0]['lr']}
         else:
             bar_log = {'loss_ce': loss[0],'loss_kd': loss[1],'loss_nor': loss[2], 'loss_mi': loss[3], 'lr': model.opt.param_groups[0]['lr']}
-
+        epoch_loss_ce.append(bar_log['loss_ce'])
         if epoch_len:
             ep_h = 3600 / (epoch_len * time_diff)
             bar_log['ep/h'] = ep_h
@@ -248,7 +248,7 @@ def train_single_epoch(model: ContinualModel,
 
     if scheduler is not None and args.scheduler_mode == 'epoch':
         scheduler.step()
-
+    return sum(epoch_loss_ce) / len(epoch_loss_ce)
 
 
 def train(model: ContinualModel, datasets: List[ContinualDataset],
@@ -321,7 +321,8 @@ def train(model: ContinualModel, datasets: List[ContinualDataset],
                                   disable=args.non_verbose, mininterval=mininterval, ncols=200)
                 if args.non_verbose:
                     logging.info(f"Task {t + 1}")  # at least print the task number
-
+                loss_ce_tracks = []
+                num_epoch_track = 2
                 while True:
                     if t == 0 and epoch == 2:
                         break
@@ -329,9 +330,12 @@ def train(model: ContinualModel, datasets: List[ContinualDataset],
 
                     train_pbar.set_description(f"Task {t + 1} - Epoch {epoch + 1}")
 
-                    train_single_epoch(model, train_loader, args, pbar=train_pbar, epoch=epoch,
+                    avg_loss_ce = train_single_epoch(model, train_loader, args, pbar=train_pbar, epoch=epoch,
                                        system_tracker=system_tracker, scheduler=scheduler)
-
+                    print("[INFO] Average CELoss {0:.3f}".format(avg_loss_ce))
+                    loss_ce_tracks.append(avg_loss_ce)
+                    if np.mean(loss_ce_tracks[-num_epoch_track:]) < 0.5:
+                        break
 
 
                     model.end_epoch(epoch, datasets[t])

@@ -344,7 +344,7 @@ class InverseMoE(nn.Module):
         return binary_matrix_flat.view(B, N, N)
 
 class BiLORA_MoE(Attention_LoRA):
-    def __init__(self, dim, num_heads=8, qkv_bias=False, qk_scale=None, attn_drop=0., proj_drop=0., r=64, n_tasks=10, n_frq=3000, num_experts=32, topk=3, use_expert_weights=False):
+    def __init__(self, dim, num_heads=8, qkv_bias=False, qk_scale=None, attn_drop=0., proj_drop=0., r=64, n_tasks=10, n_frq=9000, num_experts=32, topk=3, use_expert_weights=False):
         super().__init__(dim, num_heads, qkv_bias, qk_scale, attn_drop, proj_drop, r, n_tasks)
         self.num_experts= num_experts
         self.n_tasks = n_tasks

@@ -113,7 +113,8 @@ class SequentialChestX(ContinualDataset):
                                      std=STD)
 
     TRANSFORM = transforms.Compose([
-        transforms.Resize(size=SIZE, interpolation=InterpolationMode.BICUBIC),
+        transforms.RandomResizedCrop(224, interpolation=InterpolationMode.BICUBIC),
+        transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         normalize,
     ])
