@@ -213,7 +213,7 @@ class LEAR(ContinualModel):
             p_loss = self.cal_router_penalty_loss()
             # loss_tot = loss_ce + loss_kd + loss_hsic + loss_mi + p_loss
             loss_tot = loss_ce + loss_hsic + p_loss
-            loss_vis = [loss_ce.item(), loss_hsic.item(), p_loss.item()]
+            loss_vis = [loss_ce.item(), loss_hsic.item(), p_loss.item(), 0, 0]
         else:
             # NOTE: Task đầu tiên
             outputs, global_features, local_features = self.net(inputs)
