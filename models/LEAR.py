@@ -36,13 +36,7 @@ class LEAR(ContinualModel):
 
         self.train_loader_size = None
         self.iter = 0
-        self.use_bilora = True if args.use_bilora == 1 else False
-        print("Use BiLORA: ", self.use_bilora)
-        self.apply_bilora_for = args.apply_bilora_for
-        self.bilora_mode = args.bilora_mode
-        print("Apply BiLORA for: ", self.apply_bilora_for)
-        if self.use_bilora:
-            self.init_bilora()
+        self.init_bilora()
 
     def end_task(self, dataset) -> None:
         #calculate distribution
@@ -191,12 +185,10 @@ class LEAR(ContinualModel):
     
     def init_bilora(self):
         print("[INFO] Initializing BiLoRA MoE")
-        if self.apply_bilora_for in ["global", "both"]:
-            for i in range(3):
-                self.net.global_vitmodel.blocks[9 + i].attn = BiLORA_MoE(dim=768)
-        if self.apply_bilora_for in ["local", "both"]:
-            for i in range(3):
-                self.net.local_vitmodel.blocks[9 + i].attn = BiLORA_MoE(dim=768)
+        for i in range(3):
+            self.net.global_vitmodel.blocks[9 + i].attn = BiLORA_MoE(dim=768, n_frq=self.args.n_frq, num_experts=self.args.n_experts, topk=self.args.topk)
+        for i in range(3):
+            self.net.local_vitmodel.blocks[9 + i].attn = BiLORA_MoE(dim=768, n_frq=self.args.n_frq, num_experts=self.args.n_experts, topk=self.args.topk)
 
     def cal_router_penalty_loss(self):
         router_penalty = 0
