@@ -193,8 +193,8 @@ def train_single_epoch(model: ContinualModel,
 
     i = 0
     previous_time = time()
-    epoch_loss_ce = []
 
+    epoch_loss_ce = []
     while True:
         try:
             data = next(train_iter)
@@ -249,6 +249,7 @@ def train_single_epoch(model: ContinualModel,
     if scheduler is not None and args.scheduler_mode == 'epoch':
         scheduler.step()
     return sum(epoch_loss_ce) / len(epoch_loss_ce)
+
 
 
 def train(model: ContinualModel, datasets: List[ContinualDataset],
@@ -321,11 +322,10 @@ def train(model: ContinualModel, datasets: List[ContinualDataset],
                                   disable=args.non_verbose, mininterval=mininterval, ncols=200)
                 if args.non_verbose:
                     logging.info(f"Task {t + 1}")  # at least print the task number
+
                 loss_ce_tracks = []
                 num_epoch_track = 2
                 while True:
-                    if t == 0 and epoch == 2:
-                        break
                     model.begin_epoch(epoch, datasets[t])
 
                     train_pbar.set_description(f"Task {t + 1} - Epoch {epoch + 1}")
@@ -346,7 +346,7 @@ def train(model: ContinualModel, datasets: List[ContinualDataset],
                     
 
                 train_pbar.close()
-
+                print(f"[Task {t + 1}] Avg Loss:", loss_ce_tracks)
             model.meta_end_task(datasets[t])
 
             accs = evaluate(model, datasets, test_loaders)

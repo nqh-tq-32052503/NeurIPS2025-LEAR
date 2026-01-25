@@ -71,9 +71,6 @@ class LEAR(MammothBackbone):
             for param in block.parameters():
                 param.requires_grad = True
 
-        self.Freezed_global_blocks = None
-        self.Freezed_local_blocks = None
-
         self.Forever_freezed_blocks = copy.deepcopy(torch.nn.Sequential(*list(self.local_vitmodel.blocks[-3:])))
         for block in self.Forever_freezed_blocks:
             for param in block.parameters():
@@ -82,7 +79,6 @@ class LEAR(MammothBackbone):
     def CreateNewExper(self, idx, num_classes):
         new_fc_dim = self.fc_dim
         new_fc = nn.Linear(self.model_dim, new_fc_dim, device=self.device)
-        new_fc.load_state_dict(self.fcArr[idx].state_dict())
         # self.classifier.load_state_dict(self.classifierArr[idx].state_dict())
         # print('load expert ' + str(idx + 1) + ' parameters')
         self.fcArr.append(new_fc)
@@ -104,14 +100,9 @@ class LEAR(MammothBackbone):
         return out
 
     def forward(self, x: torch.Tensor, return_features=False) -> torch.Tensor:
-        if return_features:
-            Freezed_global_features, Freezed_local_features, global_features, local_features = self.forward_fusion(x,
-                                                                                                                   return_features=True)
-            outputs = self.forward_expert(global_features, local_features, return_features=return_features)
-            return  outputs, Freezed_global_features, Freezed_local_features, global_features, local_features
-        else:
-            global_features, local_features = self.forward_fusion(x)
-            return self.forward_expert(global_features, local_features, return_features=return_features), global_features, local_features
+        global_features, local_features = self.forward_fusion(x, return_features=True)
+        outputs = self.forward_expert(global_features, local_features, return_features=return_features)
+        return  outputs, global_features, local_features
 
     def forward_fusion(self, x, return_features=False):
 
@@ -129,36 +120,17 @@ class LEAR(MammothBackbone):
         global_features = global_features + self.global_vitmodel.pos_embed
 
         # forward pass till -3 layer
-        for block in self.local_vitmodel.blocks[:-3]:
+        for block in self.local_vitmodel.blocks:
             local_features = block(local_features)
 
-        for block in self.global_vitmodel.blocks[:-3]:
-            global_features = block(global_features)
-
-        if return_features:
-            Freezed_global_features = self.Freezed_global_blocks(global_features)
-            Freezed_local_features = self.Freezed_local_blocks(local_features)
-
-        for block in self.local_vitmodel.blocks[-3:]:
-            local_features = block(local_features)
-
-        for block in self.global_vitmodel.blocks[-3:]:
+        for block in self.global_vitmodel.blocks:
             global_features = block(global_features)
 
         local_features = self.local_vitmodel.norm(local_features)
         local_features = local_features[:, 0, :]
         global_features = self.global_vitmodel.norm(global_features)
         global_features = global_features[:, 0, :]
-
-        if return_features:
-            Freezed_global_features = self.global_vitmodel.norm(Freezed_global_features)
-            Freezed_global_features = Freezed_global_features[:, 0, :]
-            Freezed_local_features = self.local_vitmodel.norm(Freezed_local_features)
-            Freezed_local_features = Freezed_local_features[:, 0, :]
-
-            return Freezed_global_features, Freezed_local_features, global_features, local_features
-        else:
-            return global_features, local_features
+        return global_features, local_features
 
     def load_expert(self, index):
         task_expert = torch.jit.load(f"./factory/task_{index}.pt")

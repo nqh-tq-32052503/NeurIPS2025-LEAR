@@ -105,74 +105,12 @@ class LEAR(ContinualModel):
             for param in cls.parameters():
                 param.requires_grad = False
         self.reset_router_penalty()
-        self.net.Freezed_local_blocks = copy.deepcopy(torch.nn.Sequential(*list(self.net.local_vitmodel.blocks[-3:])))
-        self.net.Freezed_global_blocks = copy.deepcopy(torch.nn.Sequential(*list(self.net.global_vitmodel.blocks[-3:])))
-
-        for block in self.net.Freezed_local_blocks:
-            for param in block.parameters():
-                param.requires_grad = False
-
-        for block in self.net.Freezed_global_blocks:
-            for param in block.parameters():
-                param.requires_grad = False
-
         self.save_current_task()
         
     def begin_task(self, dataset, threshold=0) -> None:
-        train_loader = dataset.train_loader
         min_idx = 0
         if self.current_task > 0:
-            num_choose = len(train_loader)
-            with torch.no_grad():
-                train_iter = iter(train_loader)
-
-                pbar = tqdm(train_iter, total=num_choose,
-                            desc=f"Choose params for task {self.current_task + 1}",
-                            disable=False, mininterval=0.5)
-
-                count = 0
-                while count < num_choose:
-                    try:
-                        data = next(train_iter)
-                    except StopIteration:
-                        break
-
-                    x = data[0]
-                    x = x.to(self.device)
-
-                    processX = self.net.vitProcess(x)
-                    if processX.size(1) == 1:
-                        processX = processX.expand(-1, 3, -1, -1)
-                    features = self.net.local_vitmodel.patch_embed(processX)
-                    cls_token = self.net.local_vitmodel.cls_token.expand(features.shape[0], -1, -1)
-                    features = torch.cat((cls_token, features), dim=1)
-                    features = features + self.net.local_vitmodel.pos_embed
-
-                    # forward pass till -3
-                    for block in self.net.local_vitmodel.blocks[:-3]:
-                        features = block(features)
-
-                    features = self.net.Forever_freezed_blocks(features)
-
-                    features = self.net.local_vitmodel.norm(features)
-
-                    class_token = features[:, 0, :]
-                    distances = [0] * len(self.net.fcArr)
-                    for t, (fc, dist) in enumerate(zip(self.net.fcArr, self.net.distributions)):
-                        fc_feature = fc(class_token)
-                        delta = fc_feature - dist.mean
-                        inv_cov = torch.linalg.inv(dist.covariance_matrix)
-                        mahalanobis = torch.sqrt(delta @ inv_cov @ delta.T).diagonal()
-                        distances[t] += mahalanobis.mean()
-
-                    count += 1
-                    bar_log = {'distances': [round((x / count).item(), 2) for x in distances]}
-                    pbar.set_postfix(bar_log, refresh=False)
-                    pbar.update()
-                pbar.close()
-
-                min_idx = torch.argmin(torch.tensor(distances)).item()
-                self.net.CreateNewExper(min_idx, dataset.N_CLASSES)
+            self.net.CreateNewExper(min_idx, dataset.N_CLASSES)
 
         self.opt = self.get_optimizer()
 
@@ -199,33 +137,17 @@ class LEAR(ContinualModel):
         return out
 
     def observe(self, inputs, labels, not_aug_inputs, epoch=None):
-        l2_distance = torch.nn.MSELoss()
         # HSIC: Measure of dependence between global and local features
         # Put negative sign because we want to maximize the dependence between them
         self.opt.zero_grad()
-        if len(self.net.fcArr) > 1:
-            # NOTE: Task tiếp theo
-            outputs, Freezed_global_features, Freezed_local_features, global_features, local_features = self.net(inputs, return_features=True)
-            loss_kd = kl_loss(local_features, Freezed_local_features)
-            loss_mi = l2_distance(global_features, Freezed_global_features) #Directly calculate the L2 distance between features is more efficient than calculate MI between prediction, and it's also effective
-            loss_hsic = -hsic(global_features, local_features)
-            loss_ce = self.loss(outputs, labels)
-            p_loss = self.cal_router_penalty_loss()
-            loss_tot = loss_ce + loss_kd + loss_hsic + loss_mi + p_loss
-            loss_vis = [loss_ce.item(), loss_kd.item(), loss_hsic.item(), p_loss.item()]
-        else:
-            # NOTE: Task đầu tiên
-            outputs, global_features, local_features = self.net(inputs)
-            loss_hsic = -hsic(global_features, local_features)
-            loss_ce = self.loss(outputs, labels)
-            p_loss = self.cal_router_penalty_loss()
-            loss_tot = loss_ce + loss_hsic + p_loss
-            loss_vis = [loss_ce.item(), p_loss.item()]
-
+        outputs, global_features, local_features = self.net(inputs, return_features=True)
+        loss_hsic = -hsic(global_features, local_features)
+        loss_ce = self.loss(outputs, labels)
+        p_loss = self.cal_router_penalty_loss()
+        loss_tot = loss_ce + loss_hsic + p_loss
+        loss_vis = [loss_ce.item(), loss_hsic.item(), p_loss.item(), 0]
 
         loss_tot.backward()
-
-
         self.opt.step()
 
         return loss_vis
