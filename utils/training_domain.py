@@ -334,7 +334,8 @@ def train(model: ContinualModel, datasets: List[ContinualDataset],
                                        system_tracker=system_tracker, scheduler=scheduler)
                     print("[INFO] Average CELoss {0:.3f}".format(avg_loss_ce))
                     loss_ce_tracks.append(avg_loss_ce)
-                    if np.mean(loss_ce_tracks[-num_epoch_track:]) < 0.5:
+                    loss_track = loss_ce_tracks[:-num_epoch_track:]
+                    if np.mean(loss_track) < args.ce_thresh and len(loss_track) >= 2:
                         break
 
 

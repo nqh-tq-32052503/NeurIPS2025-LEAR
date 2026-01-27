@@ -224,6 +224,7 @@ def add_configuration_args(parser: ArgumentParser, args: Namespace) -> None:
     config_group.add_argument('--n_frq', type=int, default=9000, help="Number of non-zero elements in each BiLORA matrix")
     config_group.add_argument('--n_experts', type=int, default=32, help="Number of experts")
     config_group.add_argument('--topk', type=int, default=3, help="Select top-k experts")
+    config_group.add_argument('--ce_thresh', type=float, default=0.2, help="CE Loss Threshold")
 
 def add_initial_args(parser) -> ArgumentParser:
     """
