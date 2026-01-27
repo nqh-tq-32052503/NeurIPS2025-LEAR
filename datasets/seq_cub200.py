@@ -148,11 +148,15 @@ class SequentialCUB200(ContinualDataset):
     SIZE = (MyCUB200.IMG_SIZE, MyCUB200.IMG_SIZE)
     MEAN, STD = [0.485, 0.456, 0.406], [0.229, 0.224, 0.225]
     TRANSFORM = transforms.Compose([
-        transforms.Resize((300, 300), interpolation=InterpolationMode.BICUBIC),
-        transforms.RandomCrop(SIZE),
-        transforms.RandomHorizontalFlip(),
+        transforms.Resize(int(SIZE[0] * 1.15), interpolation=InterpolationMode.BICUBIC),
+        transforms.RandomResizedCrop(SIZE, scale=(0.6, 1.0), ratio=(3/4, 4/3)),
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.RandomRotation(degrees=15),
+        transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
         transforms.ToTensor(),
-        transforms.Normalize(MEAN, STD)])
+        transforms.Normalize(MEAN, STD),
+        transforms.RandomErasing(p=0.2, scale=(0.02, 0.2), ratio=(0.3, 3.3))
+    ])
     TEST_TRANSFORM = transforms.Compose([transforms.Resize(256, interpolation=InterpolationMode.BICUBIC),
                                          transforms.CenterCrop(MyCUB200.IMG_SIZE),
                                          transforms.ToTensor(),

@@ -348,7 +348,7 @@ class BiLORA_MoE(Attention_LoRA):
         super().__init__(dim, num_heads, qkv_bias, qk_scale, attn_drop, proj_drop, r, n_tasks)
         self.num_experts= num_experts
         self.n_tasks = n_tasks
-        assert num_experts < (dim * dim) / n_frq, "Number of experts is too large"
+        assert num_experts <= (dim * dim) / n_frq, "Number of experts is too large"
         self.topk = topk
         self.n_frq = n_frq
         self.use_expert_weights = use_expert_weights

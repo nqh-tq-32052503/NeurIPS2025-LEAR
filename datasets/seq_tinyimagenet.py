@@ -134,11 +134,17 @@ class SequentialTinyImagenet(ContinualDataset):
     N_CLASSES = N_CLASSES_PER_TASK * N_TASKS
     MEAN, STD = (0.4802, 0.4480, 0.3975), (0.2770, 0.2691, 0.2821)
     SIZE = (64, 64)
-    TRANSFORM = transforms.Compose(
-        [transforms.RandomCrop(64, padding=4),
-         transforms.RandomHorizontalFlip(),
-         transforms.ToTensor(),
-         transforms.Normalize(MEAN, STD)])
+    TRANSFORM = transforms.Compose([
+        transforms.RandomResizedCrop(64, scale=(0.8, 1.0)), # Thay cho RandomCrop để đa dạng góc nhìn
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomRotation(15),         # Xoay nhẹ ảnh (khoảng 15 độ)
+        transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2), # Thay đổi màu sắc
+        # Hoặc thay các dòng trên bằng 1 dòng duy nhất:
+        # transforms.AutoAugment(transforms.AutoAugmentPolicy.IMAGENET), 
+        transforms.ToTensor(),
+        transforms.Normalize(MEAN, STD),
+        # transforms.RandomErasing(p=0.2),      # Xóa ngẫu nhiên một vùng nhỏ để tránh overfitting
+    ])
 
     def get_data_loaders(self) -> Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
         transform = self.TRANSFORM
